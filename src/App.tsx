@@ -1,341 +1,238 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import gsap from 'gsap';
 import confetti from 'canvas-confetti';
 import { Sparkles, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-// ─── Constants ─────────────────────────────────────────────────────────────
-const SLICES = 10;
-const TARGET_INDEX = 0; // ô vàng luôn thắng
-const SLICE_DEG = 360 / SLICES; // 36° mỗi ô
-const MIN_SPINS = 7; // vòng tối thiểu trước khi dừng
+// ─── Constants & Generators ────────────────────────────────────────────────
+const ITEM_WIDTH = 140; 
+const ITEM_GAP = 12;
+const TOTAL_WIDTH = ITEM_WIDTH + ITEM_GAP;
+const TARGET_INDEX = 75; // Vị trí của món đồ vàng
+const TOTAL_ITEMS = 100;
 
-// Slice center trong conic-gradient(from -18deg, ...):
-// Slice i bắt đầu từ (-18 + i*36)deg, center = (-18 + i*36 + 18) = i*36 deg
-// Pointer ở top = 0° → để slice TARGET_INDEX dừng ở top:
-// net rotation sau khi GSAP = 0° (mod 360) → wheel ở đúng vị trí ban đầu
-// => finalAngle = N * 360 (luôn thắng slice 0)
+// Các độ hiếm theo style CS:GO
+const RARITIES = [
+  { color: '#4b69ff', bg: 'bg-blue-500', name: 'Mil-Spec' },
+  { color: '#8847ff', bg: 'bg-purple-500', name: 'Restricted' },
+  { color: '#d32ce6', bg: 'bg-pink-500', name: 'Classified' },
+  { color: '#eb4b4b', bg: 'bg-red-500', name: 'Covert' },
+];
 
-function getWinningFinalRotation(currentGsapRotation: number): number {
-  // làm tròn về bội số 360° gần nhất phía trên currentGsapRotation
-  const alreadySpun = Math.abs(currentGsapRotation);
-  const base = Math.ceil(alreadySpun / 360) * 360;
-  const target = base + MIN_SPINS * 360;
-  return target; // luôn dừng tại rotation % 360 === 0 → ô vàng (slice 0) dưới pointer
+function generateItems() {
+  return Array.from({ length: TOTAL_ITEMS }, (_, i) => {
+    // Luôn luôn là vàng ở vị trí target
+    if (i === TARGET_INDEX) {
+      return { id: i, color: '#ffd700', bg: 'bg-yellow-400', name: '★ Special Item ★', isGold: true };
+    }
+    // Random các món khác
+    const r = Math.random();
+    let rarity;
+    if (r < 0.6) rarity = RARITIES[0];
+    else if (r < 0.85) rarity = RARITIES[1];
+    else if (r < 0.96) rarity = RARITIES[2];
+    else rarity = RARITIES[3];
+    
+    return { id: i, ...rarity, isGold: false };
+  });
 }
-
-// ─── Slice colors & labels ─────────────────────────────────────────────────
-const SLICE_DATA = Array.from({ length: SLICES }, (_, i) => ({
-  index: i,
-  isTarget: i === TARGET_INDEX,
-  color: i === TARGET_INDEX ? '#fde047' : i % 2 === 0 ? '#f8fafc' : '#e2e8f0',
-  label: 'HIDDEN',
-}));
-
-const conicColors = SLICE_DATA.map(({ color }, i) =>
-  `${color} ${i * SLICE_DEG}deg ${(i + 1) * SLICE_DEG}deg`
-).join(', ');
 
 // ─── Component ──────────────────────────────────────────────────────────────
 export default function App() {
   const [phase, setPhase] = useState<'idle' | 'spinning' | 'winner' | 'claimed'>('idle');
-  const wheelRef = useRef<HTMLDivElement>(null);
+  const [items, setItems] = useState(() => generateItems());
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const spinTweenRef = useRef<gsap.core.Tween | null>(null);
-  // Track cumulative GSAP rotation so reset stays consistent
-  const cumulativeRotation = useRef(0);
 
-  const spin = useCallback(() => {
+  const spin = () => {
     if (phase !== 'idle') return;
+    if (!containerRef.current || !stripRef.current) return;
+
     setPhase('spinning');
 
-    const finalRotation = getWinningFinalRotation(cumulativeRotation.current);
-    cumulativeRotation.current = finalRotation;
+    // Generate bộ item mới để nhìn nó xịn hơn mỗi lần quay (nhưng giữ vàng ở target)
+    setItems(generateItems());
+    
+    // Reset vị trí về 0
+    gsap.set(stripRef.current, { x: 0 });
 
-    spinTweenRef.current = gsap.to(wheelRef.current, {
-      rotation: finalRotation,
-      duration: 7,
-      ease: 'power3.inOut',
-      onUpdate() {
-        // Add subtle wobble near the end (last 20% of duration)
-        const progress = this.progress();
-        if (progress > 0.82 && progress < 0.98) {
-          const wobble = Math.sin(progress * 120) * (1 - progress) * 3;
-          gsap.set(wheelRef.current, { skewX: wobble });
-        } else if (progress >= 0.98) {
-          gsap.set(wheelRef.current, { skewX: 0 });
-        }
-      },
+    const containerWidth = containerRef.current.clientWidth;
+    // Tính toán tọa độ của item vàng
+    const itemCenterOffset = (TARGET_INDEX * TOTAL_WIDTH) + (ITEM_WIDTH / 2);
+    // Để item vàng nằm chính giữa container
+    const baseTranslate = itemCenterOffset - (containerWidth / 2);
+    
+    // Thêm random offset xê dịch trong phạm vi chiều rộng của item (trừ đi 10px lề cho an toàn)
+    // Random từ -(ITEM_WIDTH/2 - 10) đến +(ITEM_WIDTH/2 - 10)
+    const randomOffset = (Math.random() - 0.5) * (ITEM_WIDTH - 20);
+    
+    const finalTranslate = -(baseTranslate + randomOffset);
+
+    // Tính thời gian chậm dần đều của GSAP power4.out
+    gsap.to(stripRef.current, {
+      x: finalTranslate,
+      duration: 8,
+      ease: 'power4.out',
       onComplete: () => {
-        // Satisfying snap + bounce
-        gsap.fromTo(
-          wheelRef.current,
-          { scaleX: 1.04, scaleY: 0.97 },
-          {
-            scaleX: 1, scaleY: 1,
-            duration: 0.5,
-            ease: 'elastic.out(1.2, 0.4)',
-            onComplete: () => {
-              setPhase('winner');
-              triggerWin();
-            }
-          }
-        );
-      },
+        setPhase('winner');
+        triggerWin();
+      }
     });
-  }, [phase]);
+  };
 
   const triggerWin = () => {
-    // Audio
+    // Play win audio
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
       audioRef.current.volume = 0.6;
       audioRef.current.play().catch(() => {});
     }
 
-    // Confetti burst
     const launch = (opts: confetti.Options) => confetti({ ...opts, zIndex: 9999 });
 
-    // Center burst
-    launch({ particleCount: 120, spread: 100, origin: { y: 0.5 }, colors: ['#fde047', '#ef4444', '#ec4899', '#3b82f6', '#10b981', '#ffffff'] });
+    // Center explosion
+    launch({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: ['#fde047', '#fbbf24', '#ffffff'] });
 
-    // Continuous side cannons
+    // Side cannons
     const end = Date.now() + 3500;
     const frame = () => {
-      launch({ particleCount: 7, angle: 55, spread: 65, origin: { x: 0, y: 0.75 }, colors: ['#fde047', '#ef4444', '#ec4899'] });
-      launch({ particleCount: 7, angle: 125, spread: 65, origin: { x: 1, y: 0.75 }, colors: ['#3b82f6', '#10b981', '#fde047'] });
+      launch({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0, y: 0.7 }, colors: ['#fde047', '#fbbf24'] });
+      launch({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1, y: 0.7 }, colors: ['#fde047', '#fbbf24'] });
       if (Date.now() < end) requestAnimationFrame(frame);
     };
     frame();
-
-    // Hearts
-    launch({ particleCount: 30, spread: 80, origin: { y: 0.3 }, shapes: ['circle'], colors: ['#ec4899', '#f43f5e', '#fb7185'] });
   };
 
   const reset = () => {
     setPhase('idle');
-    // Reset GSAP rotation to 0 without animating
-    gsap.set(wheelRef.current, { rotation: 0, skewX: 0, scaleX: 1, scaleY: 1 });
-    cumulativeRotation.current = 0;
+    gsap.set(stripRef.current, { x: 0 });
+    setItems(generateItems());
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center font-sans overflow-hidden relative select-none">
-      {/* Ambient gradient glow behind wheel */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-yellow-100 opacity-40 blur-3xl" />
+    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center font-sans overflow-hidden relative select-none">
+      
+      {/* Ambient background glow */}
+      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+        <div className="w-[800px] h-[300px] bg-slate-800 opacity-50 blur-[100px] rounded-full" />
       </div>
 
-      {/* Audio */}
       <audio ref={audioRef} src="https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3" preload="auto" />
 
       <AnimatePresence mode="wait">
         {phase !== 'claimed' ? (
           <motion.div
-            key="wheel-screen"
-            initial={{ opacity: 0, y: 24 }}
+            key="unbox-screen"
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, filter: 'blur(8px)' }}
-            transition={{ duration: 0.45 }}
-            className="flex flex-col items-center gap-6 z-10 w-full max-w-lg px-4"
+            exit={{ opacity: 0, scale: 0.95, filter: 'blur(5px)' }}
+            transition={{ duration: 0.4 }}
+            className="flex flex-col items-center z-10 w-full max-w-6xl px-4"
           >
             {/* Title */}
-            <div className="text-center">
-              <h1 className="text-4xl md:text-5xl font-black text-slate-800 tracking-tight">
-                Vòng Quay May Mắn 🎡
+            <div className="text-center mb-12">
+              <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight uppercase drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+                Mystery Case
               </h1>
-              <p className="text-slate-500 mt-2 text-base font-medium">
-                {phase === 'idle' && 'Nhấn QUAY để thử vận may!'}
-                {phase === 'spinning' && 'Đang quay…'}
-                {phase === 'winner' && '🎉 Trúng rồi! Nhấn để nhận quà!'}
+              <p className="text-slate-400 mt-3 text-lg font-medium">
+                {phase === 'idle' && 'Mở hòm nhận quà ngay!'}
+                {phase === 'spinning' && 'Đang tìm kiếm vận may...'}
+                {phase === 'winner' && '🎉 Vàng rồi!!! Chúc mừng bạn!'}
               </p>
             </div>
 
-            {/* Wheel area */}
-            <div className="relative flex items-center justify-center">
+            {/* CSGO Case Container */}
+            <div className="w-full relative py-6">
+              
+              {/* Center Line Pointer */}
+              <div className="absolute top-0 bottom-0 left-1/2 w-1 bg-amber-400 -translate-x-1/2 z-30 shadow-[0_0_15px_rgba(251,191,36,0.8)]" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-2 border-[10px] border-transparent border-t-amber-400 z-30" />
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 -mb-2 border-[10px] border-transparent border-b-amber-400 z-30" />
 
-              {/* Outer decorative ring */}
-              <div
-                className="absolute rounded-full"
-                style={{
-                  width: 'calc(100% + 24px)',
-                  height: 'calc(100% + 24px)',
-                  background: 'conic-gradient(#fde047, #ef4444, #3b82f6, #10b981, #ec4899, #fde047)',
-                  filter: 'blur(1px)',
-                  opacity: 0.4,
-                }}
-              />
+              {/* Gradient Overlay for Fade Edges */}
+              <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-slate-900 to-transparent z-20 pointer-events-none" />
+              <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-slate-900 to-transparent z-20 pointer-events-none" />
 
-              {/* Pointer triangle */}
-              <div
-                className="absolute z-30"
+              {/* Items Container */}
+              <div 
+                ref={containerRef}
+                className="w-full h-40 overflow-hidden bg-slate-800/80 border-y-2 border-slate-700/50 shadow-2xl relative"
                 style={{
-                  top: '-28px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: 0, height: 0,
-                  borderLeft: '18px solid transparent',
-                  borderRight: '18px solid transparent',
-                  borderTop: '42px solid #ef4444',
-                  filter: 'drop-shadow(0 4px 6px rgba(239,68,68,0.5))',
+                  boxShadow: 'inset 0 0 50px rgba(0,0,0,0.5)'
                 }}
-              />
-              {/* Pointer highlight */}
-              <div
-                className="absolute z-30"
-                style={{
-                  top: '-22px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: 0, height: 0,
-                  borderLeft: '8px solid transparent',
-                  borderRight: '8px solid transparent',
-                  borderTop: '18px solid rgba(255,255,255,0.5)',
-                }}
-              />
-
-              {/* The Wheel */}
-              <div
-                className="relative cursor-pointer rounded-full overflow-hidden"
-                style={{
-                  width: 340, height: 340,
-                  boxShadow: '0 30px 60px -10px rgba(0,0,0,0.25), 0 0 0 8px white, 0 0 0 12px #f1f5f9',
-                }}
-                onClick={spin}
               >
-                {/* Conic wheel disc */}
-                <div
-                  ref={wheelRef}
-                  className="w-full h-full rounded-full"
-                  style={{
-                    background: `conic-gradient(from -18deg, ${conicColors})`,
-                  }}
+                {/* Rolling Strip */}
+                <div 
+                  ref={stripRef}
+                  className="flex h-full items-center absolute left-0"
+                  style={{ gap: `${ITEM_GAP}px`, paddingLeft: '50vw' }} // Padding trái để khởi đầu mượt nếu cần, hoặc ta ko xài
                 >
-                  {/* Divider lines */}
-                  {SLICE_DATA.map((_, i) => (
-                    <div
-                      key={`line-${i}`}
-                      className="absolute top-0 left-1/2 origin-bottom pointer-events-none"
-                      style={{
-                        width: 2, height: '50%',
-                        marginLeft: -1,
-                        background: 'rgba(255,255,255,0.7)',
-                        transform: `rotate(${i * SLICE_DEG - 18}deg)`,
-                        transformOrigin: 'bottom center',
-                        top: 0,
-                        left: '50%',
-                        position: 'absolute',
+                  {items.map((item, index) => (
+                    <div 
+                      key={`${item.id}-${index}`}
+                      className="flex-shrink-0 h-32 relative rounded-md overflow-hidden bg-slate-800 flex flex-col justify-end"
+                      style={{ 
+                        width: `${ITEM_WIDTH}px`,
+                        boxShadow: `inset 0 -4px 0 ${item.color}, 0 4px 6px rgba(0,0,0,0.3)`,
                       }}
-                    />
-                  ))}
+                    >
+                      {/* Bức ảnh hoặc logo ẩn dụ bên trong */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-30">
+                         <div className="w-16 h-16 rounded-full bg-slate-600/30" />
+                      </div>
 
-                  {/* Slice labels */}
-                  {SLICE_DATA.map(({ index, isTarget }) => {
-                    // center angle of slice i = i * 36° (because conic starts at -18deg, center at i*36)
-                    const angleDeg = index * SLICE_DEG;
-                    return (
-                      <div
-                        key={`label-${index}`}
-                        className="absolute inset-0 pointer-events-none"
-                        style={{ transform: `rotate(${angleDeg}deg)` }}
-                      >
-                        {/* Text positioned from top-center going downward */}
-                        <div
-                          className="absolute w-full flex flex-col items-center"
-                          style={{ top: '12%' }}
+                      {item.isGold && (
+                         <div className="absolute inset-0 bg-yellow-500/10 flex items-center justify-center">
+                            <Sparkles size={48} className="text-yellow-400 opacity-80" />
+                         </div>
+                      )}
+
+                      <div className="p-2 z-10 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent pt-6">
+                        <div 
+                           className="text-[10px] font-bold uppercase tracking-wider text-center line-clamp-1"
+                           style={{ color: item.color }}
                         >
-                          <span
-                            className={`font-black uppercase tracking-widest ${
-                              isTarget
-                                ? 'text-amber-700 text-[10px] opacity-80'
-                                : 'text-slate-500 text-xs'
-                            }`}
-                            style={{ transform: isTarget ? 'scale(0.85)' : undefined }}
-                          >
-                            HIDDEN
-                          </span>
-                          {isTarget && (
-                            <span className="text-amber-500 mt-0.5" style={{ fontSize: 10 }}>★</span>
-                          )}
+                          {item.name}
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
-
-                {/* Center knob */}
-                <div
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center z-20"
-                  style={{
-                    width: 60, height: 60,
-                    background: 'white',
-                    boxShadow: '0 0 0 4px #f1f5f9, 0 4px 12px rgba(0,0,0,0.2)',
-                  }}
-                >
-                  <div
-                    className="rounded-full"
-                    style={{ width: 22, height: 22, background: 'radial-gradient(circle at 35% 35%, #f87171, #ef4444)' }}
-                  />
-                </div>
-
-                {/* Winner glow overlay */}
-                <AnimatePresence>
-                  {phase === 'winner' && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: [0, 0.3, 0.1, 0.3] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                      className="absolute inset-0 rounded-full pointer-events-none"
-                      style={{ background: 'radial-gradient(circle, rgba(253,224,71,0.6) 0%, transparent 70%)' }}
-                    />
-                  )}
-                </AnimatePresence>
               </div>
             </div>
 
-            {/* Spin / Claim buttons */}
-            <div className="flex flex-col items-center gap-3 mt-2">
+            {/* Actions */}
+            <div className="mt-12">
               {phase === 'winner' ? (
                 <motion.button
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', bounce: 0.6, delay: 0.3 }}
+                  transition={{ type: 'spring', bounce: 0.6 }}
                   onClick={() => setPhase('claimed')}
-                  className="px-10 py-4 rounded-full font-black text-xl text-white cursor-pointer"
-                  style={{
-                    background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
-                    boxShadow: '0 8px 30px rgba(245,158,11,0.5)',
-                  }}
-                  whileHover={{ scale: 1.07, boxShadow: '0 12px 40px rgba(245,158,11,0.7)' }}
+                  className="px-12 py-4 rounded-lg font-black text-xl text-slate-900 uppercase tracking-widest cursor-pointer shadow-[0_0_40px_rgba(251,191,36,0.6)] bg-gradient-to-r from-yellow-300 via-yellow-400 to-amber-500"
+                  whileHover={{ scale: 1.05, filter: 'brightness(1.1)' }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  🎁 Nhận Quà Ngay!
+                  🎁 Lấy Đồ Vàng Ngay
                 </motion.button>
               ) : (
                 <motion.button
                   onClick={spin}
                   disabled={phase === 'spinning'}
-                  className="px-12 py-4 rounded-full font-black text-xl text-white cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{
-                    background: phase === 'spinning'
-                      ? 'linear-gradient(135deg, #94a3b8, #64748b)'
-                      : 'linear-gradient(135deg, #6366f1, #ec4899)',
-                    boxShadow: phase === 'spinning' ? 'none' : '0 8px 30px rgba(99,102,241,0.4)',
-                  }}
-                  whileHover={phase !== 'spinning' ? { scale: 1.07 } : {}}
-                  whileTap={phase !== 'spinning' ? { scale: 0.93 } : {}}
+                  className="px-16 py-4 rounded-lg font-black text-xl text-white uppercase tracking-widest cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-emerald-500 to-teal-600 border border-emerald-400/30 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                  whileHover={phase !== 'spinning' ? { scale: 1.05, filter: 'brightness(1.1)' } : {}}
+                  whileTap={phase !== 'spinning' ? { scale: 0.95 } : {}}
                 >
-                  {phase === 'spinning' ? '⏳ Đang Quay…' : '🎰 QUAY NGAY!'}
+                  {phase === 'spinning' ? 'Opening...' : 'Mở Hòm'}
                 </motion.button>
               )}
-
-              {phase === 'idle' && (
-                <p className="text-slate-400 text-sm">Mỗi lần quay đều có phần thưởng!</p>
-              )}
             </div>
+
           </motion.div>
         ) : (
-          // ── Reward Screen ──────────────────────────────────────────────
+          // ── Reward Claim Screen ──────────────────────────────────────────────
           <motion.div
             key="reward-screen"
             initial={{ opacity: 0, scale: 0.85, y: 40 }}
@@ -344,55 +241,55 @@ export default function App() {
             className="flex flex-col items-center gap-6 z-20 px-4 w-full max-w-xl"
           >
             <div className="text-center">
-              <h2 className="text-5xl font-black text-rose-500 mb-1">Chúc Mừng! 🎉</h2>
-              <p className="text-slate-500 font-medium text-lg">Bạn đã nhận được phần quà đặc biệt!</p>
+              <h2 className="text-5xl md:text-6xl font-black text-amber-400 mb-2 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)] uppercase tracking-wider">
+                Special Item
+              </h2>
+              <p className="text-slate-300 font-medium text-lg">Bạn đã unbox được một siêu phẩm!</p>
             </div>
 
-            {/* Gift image */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
-              className="relative rounded-3xl overflow-hidden"
-              style={{ boxShadow: '0 30px 60px rgba(0,0,0,0.15), 0 0 0 6px white, 0 0 0 10px #fde047' }}
+              className="relative rounded-2xl overflow-hidden bg-slate-800"
+              style={{ boxShadow: '0 30px 60px rgba(0,0,0,0.4), 0 0 0 2px #334155, 0 0 0 8px #fde047' }}
             >
               <img
                 src="/A gift.png"
                 alt="A special gift"
-                className="w-full max-w-md object-contain"
+                className="w-full max-w-lg h-auto object-contain bg-slate-900"
                 onError={(e) => {
                   e.currentTarget.src = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=800&auto=format&fit=crop';
                 }}
               />
             </motion.div>
 
-            {/* Floating sparkles */}
+            {/* Vòng lặp sparkle bay bay ở màn nhận quà */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              {Array.from({ length: 12 }).map((_, i) => (
+              {Array.from({ length: 15 }).map((_, i) => (
                 <motion.div
                   key={i}
-                  className="absolute text-yellow-400"
-                  style={{ left: `${10 + i * 8}%`, top: `${20 + (i % 3) * 20}%` }}
-                  animate={{ y: [0, -15, 0], opacity: [0.5, 1, 0.5], scale: [0.8, 1.2, 0.8] }}
-                  transition={{ duration: 2 + i * 0.3, repeat: Infinity, delay: i * 0.2 }}
+                  className="absolute text-yellow-400/70"
+                  style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%` }}
+                  animate={{ y: [0, -20, 0], opacity: [0, 1, 0], scale: [0.5, 1.2, 0.5], rotate: [0, 180] }}
+                  transition={{ duration: 2 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 2 }}
                 >
-                  <Sparkles size={16 + (i % 3) * 8} />
+                  <Sparkles size={16 + Math.random() * 16} />
                 </motion.div>
               ))}
             </div>
 
-            {/* Reset */}
             <motion.button
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 }}
               onClick={reset}
-              className="flex items-center gap-2 px-8 py-3 rounded-full font-bold text-slate-600 border-2 border-slate-200 hover:border-slate-400 hover:text-slate-800 transition-all cursor-pointer"
+              className="flex items-center gap-2 px-8 py-3 rounded-md font-bold text-slate-300 border border-slate-600 hover:border-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer mt-4"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               <RotateCcw size={18} />
-              Quay Lại
+              Mở hòm tiếp
             </motion.button>
           </motion.div>
         )}
