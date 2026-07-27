@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import gsap from 'gsap';
 import confetti from 'canvas-confetti';
 import { Gift, Heart, Sparkles } from 'lucide-react';
