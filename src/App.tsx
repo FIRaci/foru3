@@ -23,9 +23,9 @@ function generateItems() {
   return Array.from({ length: TOTAL_ITEMS }, (_, i) => {
     // Luôn luôn là vàng ở vị trí target
     if (i === TARGET_INDEX) {
-      return { id: i, color: '#ffd700', bg: 'bg-yellow-400', name: '★ Special Item ★', isGold: true };
+      return { id: i, color: '#ffd700', bg: 'bg-yellow-400', name: '★ Món Quà Bí Ẩn ★', isGold: true };
     }
-    // Random các món khác
+    // Random các món khác nhưng tên đều là HIDDEN
     const r = Math.random();
     let rarity;
     if (r < 0.6) rarity = RARITIES[0];
@@ -33,7 +33,7 @@ function generateItems() {
     else if (r < 0.96) rarity = RARITIES[2];
     else rarity = RARITIES[3];
     
-    return { id: i, ...rarity, isGold: false };
+    return { id: i, ...rarity, name: 'HIDDEN', isGold: false };
   });
 }
 
@@ -52,25 +52,18 @@ export default function App() {
 
     setPhase('spinning');
 
-    // Generate bộ item mới để nhìn nó xịn hơn mỗi lần quay (nhưng giữ vàng ở target)
     setItems(generateItems());
-    
-    // Reset vị trí về 0
     gsap.set(stripRef.current, { x: 0 });
 
     const containerWidth = containerRef.current.clientWidth;
-    // Tính toán tọa độ của item vàng
     const itemCenterOffset = (TARGET_INDEX * TOTAL_WIDTH) + (ITEM_WIDTH / 2);
-    // Để item vàng nằm chính giữa container
     const baseTranslate = itemCenterOffset - (containerWidth / 2);
     
     // Thêm random offset xê dịch trong phạm vi chiều rộng của item (trừ đi 10px lề cho an toàn)
-    // Random từ -(ITEM_WIDTH/2 - 10) đến +(ITEM_WIDTH/2 - 10)
     const randomOffset = (Math.random() - 0.5) * (ITEM_WIDTH - 20);
     
     const finalTranslate = -(baseTranslate + randomOffset);
 
-    // Tính thời gian chậm dần đều của GSAP power4.out
     gsap.to(stripRef.current, {
       x: finalTranslate,
       duration: 8,
@@ -83,7 +76,6 @@ export default function App() {
   };
 
   const triggerWin = () => {
-    // Play win audio
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
       audioRef.current.volume = 0.6;
@@ -92,10 +84,8 @@ export default function App() {
 
     const launch = (opts: confetti.Options) => confetti({ ...opts, zIndex: 9999 });
 
-    // Center explosion
     launch({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: ['#fde047', '#fbbf24', '#ffffff'] });
 
-    // Side cannons
     const end = Date.now() + 3500;
     const frame = () => {
       launch({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0, y: 0.7 }, colors: ['#fde047', '#fbbf24'] });
@@ -114,7 +104,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center font-sans overflow-hidden relative select-none">
       
-      {/* Ambient background glow */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
         <div className="w-[800px] h-[300px] bg-slate-800 opacity-50 blur-[100px] rounded-full" />
       </div>
@@ -131,7 +120,6 @@ export default function App() {
             transition={{ duration: 0.4 }}
             className="flex flex-col items-center z-10 w-full max-w-6xl px-4"
           >
-            {/* Title */}
             <div className="text-center mb-12">
               <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight uppercase drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
                 Mystery Case
@@ -143,19 +131,15 @@ export default function App() {
               </p>
             </div>
 
-            {/* CSGO Case Container */}
             <div className="w-full relative py-6">
               
-              {/* Center Line Pointer */}
               <div className="absolute top-0 bottom-0 left-1/2 w-1 bg-amber-400 -translate-x-1/2 z-30 shadow-[0_0_15px_rgba(251,191,36,0.8)]" />
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-2 border-[10px] border-transparent border-t-amber-400 z-30" />
               <div className="absolute bottom-0 left-1/2 -translate-x-1/2 -mb-2 border-[10px] border-transparent border-b-amber-400 z-30" />
 
-              {/* Gradient Overlay for Fade Edges */}
               <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-slate-900 to-transparent z-20 pointer-events-none" />
               <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-slate-900 to-transparent z-20 pointer-events-none" />
 
-              {/* Items Container */}
               <div 
                 ref={containerRef}
                 className="w-full h-40 overflow-hidden bg-slate-800/80 border-y-2 border-slate-700/50 shadow-2xl relative"
@@ -163,11 +147,10 @@ export default function App() {
                   boxShadow: 'inset 0 0 50px rgba(0,0,0,0.5)'
                 }}
               >
-                {/* Rolling Strip */}
                 <div 
                   ref={stripRef}
                   className="flex h-full items-center absolute left-0"
-                  style={{ gap: `${ITEM_GAP}px`, paddingLeft: '50vw' }} // Padding trái để khởi đầu mượt nếu cần, hoặc ta ko xài
+                  style={{ gap: `${ITEM_GAP}px`, paddingLeft: '50vw' }}
                 >
                   {items.map((item, index) => (
                     <div 
@@ -178,14 +161,13 @@ export default function App() {
                         boxShadow: `inset 0 -4px 0 ${item.color}, 0 4px 6px rgba(0,0,0,0.3)`,
                       }}
                     >
-                      {/* Bức ảnh hoặc logo ẩn dụ bên trong */}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                         <div className="w-16 h-16 rounded-full bg-slate-600/30" />
-                      </div>
-
-                      {item.isGold && (
-                         <div className="absolute inset-0 bg-yellow-500/10 flex items-center justify-center">
-                            <Sparkles size={48} className="text-yellow-400 opacity-80" />
+                      {item.isGold ? (
+                         <div className="absolute inset-0 bg-yellow-500/10 flex items-center justify-center p-2">
+                            <img src="/A gift.png" alt="A special gift" className="w-full h-full object-contain filter drop-shadow-md" />
+                         </div>
+                      ) : (
+                         <div className="absolute inset-0 flex items-center justify-center opacity-30">
+                            <div className="w-16 h-16 rounded-full bg-slate-600/30 flex items-center justify-center font-black text-slate-400 text-2xl">?</div>
                          </div>
                       )}
 
