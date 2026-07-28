@@ -322,12 +322,12 @@ export default function App() {
               
               {/* Navigation Arrows */}
               {currentImage > 0 && (
-                <button onClick={(e) => { e.preventDefault(); setCurrentImage(prev => prev - 1); }} className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-2 bg-black/40 hover:bg-black/70 text-white rounded-full backdrop-blur-sm transition-all shadow-lg z-10 opacity-0 group-hover/gallery:opacity-100">
+                <button onClick={(e) => { e.preventDefault(); setCurrentImage(prev => prev - 1); }} className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-2 bg-black/40 hover:bg-black/70 text-white rounded-full backdrop-blur-sm transition-all shadow-lg z-10 opacity-80 hover:opacity-100">
                    <ChevronLeft size={36} />
                 </button>
               )}
               {currentImage < images.length - 1 && (
-                <button onClick={(e) => { e.preventDefault(); setCurrentImage(prev => prev + 1); }} className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-2 bg-black/40 hover:bg-black/70 text-white rounded-full backdrop-blur-sm transition-all shadow-lg z-10 opacity-0 group-hover/gallery:opacity-100">
+                <button onClick={(e) => { e.preventDefault(); setCurrentImage(prev => prev + 1); }} className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-2 bg-black/40 hover:bg-black/70 text-white rounded-full backdrop-blur-sm transition-all shadow-lg z-10 opacity-80 hover:opacity-100">
                    <ChevronRight size={36} />
                 </button>
               )}
