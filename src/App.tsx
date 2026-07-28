@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Sparkles, PenTool, Eraser, ChevronUp, ChevronDown } from 'lucide-react';
+import { Sparkles, PenTool, Eraser, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import gsap from 'gsap';
 import confetti from 'canvas-confetti';
@@ -48,7 +48,7 @@ const MagicNote = () => {
       initial={{ rotate: -4, opacity: 0, x: -30 }}
       animate={{ rotate: -2, opacity: 1, x: 0 }}
       transition={{ type: 'spring', delay: 0.2 }}
-      className="relative w-[340px] sm:w-[420px] p-8 pb-12 bg-[#fdfbf7] shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-sm origin-bottom-left flex-shrink-0 z-20"
+      className="relative w-full max-w-[340px] sm:max-w-[420px] p-6 sm:p-8 pb-10 sm:pb-12 bg-[#fdfbf7] shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-sm flex-shrink-0 z-20 mx-auto lg:mx-0"
       style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")' }}
     >
       <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-28 h-10 bg-white/40 backdrop-blur-md shadow-sm rotate-1 border border-white/50 z-10" />
@@ -89,6 +89,8 @@ const MagicNote = () => {
 export default function App() {
   const [isBurst, setIsBurst] = useState(false);
   const [code, setCode] = useState([0, 0, 0, 0]);
+  const [currentImage, setCurrentImage] = useState(0);
+  const images = ['1.png', '2.png'];
 
   const frontRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
@@ -177,21 +179,22 @@ export default function App() {
         <div className="w-[50vw] h-[50vw] bg-blue-100/50 blur-[140px] rounded-full absolute bottom-0 right-0" />
       </div>
 
-      <div className="flex flex-col lg:flex-row items-center justify-center gap-24 w-full max-w-7xl mx-auto px-8 z-20 mt-10 lg:mt-0">
+      <div className="flex flex-col lg:flex-row items-center justify-center gap-12 sm:gap-24 w-full max-w-7xl mx-auto px-4 sm:px-8 z-20 mt-12 lg:mt-0">
         <MagicNote />
 
         {/* ─── 2.5D OBLIQUE SAFE SCENE ─── */}
-        <div
-          className={`relative flex-shrink-0 transition-all duration-1000 ${isBurst ? 'z-50' : 'z-20'}`}
-          style={{ width: W + D, height: H + D }}
-        >
+        <div className="scale-[0.65] sm:scale-[0.8] lg:scale-100 origin-center transition-transform -mt-16 sm:-mt-8 lg:mt-0">
+          <div
+            className={`relative flex-shrink-0 transition-all duration-1000 ${isBurst ? 'z-50' : 'z-20'}`}
+            style={{ width: W + D, height: H + D }}
+          >
           {/* Drop shadow on the floor */}
           <div
             className="box-shadow absolute bg-black/20 blur-xl rounded-full pointer-events-none"
             style={{ left: D/2, top: D + H - 20, width: W, height: 60 }}
           />
 
-          {/* Gift Image — appears from behind the front face after unlock */}
+          {/* Gift Image Gallery — appears from behind the front face after unlock */}
           <div className="absolute z-50 flex items-center justify-center pointer-events-none" style={{ left: 0, top: D - 60, width: W, height: H }}>
             <AnimatePresence>
               {isBurst && (
@@ -201,17 +204,31 @@ export default function App() {
                   transition={{ type: 'spring', bounce: 0.4, duration: 1.2, delay: 0.2 }}
                   className="relative group cursor-pointer pointer-events-auto"
                 >
-                  <div className="relative p-3 sm:p-5 bg-white rounded-2xl shadow-[0_30px_60px_rgba(0,0,0,0.4)] border-4 border-slate-50 hover:-translate-y-3 hover:shadow-[0_40px_80px_rgba(0,0,0,0.6)] transition-all duration-300">
-                    <a href={`${import.meta.env.BASE_URL}A gift.png`} download="A gift.png" className="block text-center cursor-pointer">
-                      <img
-                        src={`${import.meta.env.BASE_URL}A gift.png`}
-                        alt="A magical gift for you"
-                        className="w-[90vw] max-w-[500px] sm:max-w-[650px] lg:max-w-[800px] xl:max-w-[900px] h-auto max-h-[75vh] rounded-xl object-contain"
-                      />
-                      <p className="mt-4 mb-2 text-rose-500 font-bold animate-pulse text-xl sm:text-3xl" style={{ fontFamily: "'Caveat', cursive" }}>
-                         ✨ Click the image to claim and download it! ✨
+                  <div className="relative p-3 sm:p-5 bg-white rounded-2xl shadow-[0_30px_60px_rgba(0,0,0,0.4)] border-4 border-slate-50 hover:-translate-y-2 hover:shadow-[0_40px_80px_rgba(0,0,0,0.6)] transition-all duration-300 group/gallery">
+                    <img
+                      src={`${import.meta.env.BASE_URL}${images[currentImage]}`}
+                      alt="A magical gift for you"
+                      className="w-[90vw] max-w-[500px] sm:max-w-[650px] lg:max-w-[800px] xl:max-w-[900px] h-auto max-h-[75vh] rounded-xl object-contain transition-opacity duration-300"
+                    />
+                    
+                    {/* Navigation Arrows */}
+                    {currentImage > 0 && (
+                      <button onClick={(e) => { e.preventDefault(); setCurrentImage(prev => prev - 1); }} className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-black/30 hover:bg-black/60 text-white rounded-full backdrop-blur-sm transition-all shadow-lg z-10 opacity-0 group-hover/gallery:opacity-100">
+                         <ChevronLeft size={36} />
+                      </button>
+                    )}
+                    {currentImage < images.length - 1 && (
+                      <button onClick={(e) => { e.preventDefault(); setCurrentImage(prev => prev + 1); }} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-black/30 hover:bg-black/60 text-white rounded-full backdrop-blur-sm transition-all shadow-lg z-10 opacity-0 group-hover/gallery:opacity-100">
+                         <ChevronRight size={36} />
+                      </button>
+                    )}
+
+                    <a href={`${import.meta.env.BASE_URL}${images[currentImage]}`} download={images[currentImage]} className="block text-center mt-4">
+                      <p className="mb-2 text-rose-500 font-bold animate-pulse text-xl sm:text-3xl hover:text-rose-600 transition-colors" style={{ fontFamily: "'Caveat', cursive" }}>
+                         ✨ Click here to claim and download! ✨
                       </p>
                     </a>
+
                     <Sparkles className="absolute -top-8 -right-8 text-amber-400 w-16 h-16 animate-pulse pointer-events-none" />
                     <Sparkles className="absolute -bottom-6 -left-6 text-rose-400 w-12 h-12 animate-pulse pointer-events-none" style={{ animationDelay: '200ms' }} />
                   </div>
@@ -311,6 +328,7 @@ export default function App() {
                </div>
             </div>
           </div>
+        </div>
         </div>
 
       </div>
