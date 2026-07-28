@@ -279,10 +279,10 @@ export default function App() {
             ))}
 
             {/* ── THE DIAL PANEL ── */}
-            <div ref={panelRef} className="relative w-[85%] h-[55%] bg-[#0f172a] rounded-xl shadow-[inset_0_10px_30px_rgba(0,0,0,1),_0_10px_20px_rgba(0,0,0,0.6)] border border-slate-700 flex items-center p-4 pl-6 pointer-events-auto">
+            <div ref={panelRef} className="relative w-[90%] h-[55%] bg-[#0f172a] rounded-xl shadow-[inset_0_10px_30px_rgba(0,0,0,1),_0_10px_20px_rgba(0,0,0,0.6)] border border-slate-700 flex items-center p-4 pl-4 pointer-events-auto">
                
                {/* Dials */}
-               <div className="flex gap-3">
+               <div className="flex gap-2">
                  {code.map((num, idx) => (
                     <div key={idx} className="flex flex-col items-center">
                       <button onClick={(e) => handleDigitChange(e, idx, 1)} className="text-slate-400 hover:text-white pb-1 disabled:opacity-30" disabled={isBurst}>
@@ -311,9 +311,9 @@ export default function App() {
                </div>
                
                {/* Lock Handle Circle on the right */}
-               <div className="absolute right-[-24px] top-1/2 -translate-y-1/2 w-24 h-24 bg-gradient-to-br from-slate-300 to-slate-500 rounded-full border-8 border-slate-400 shadow-[0_10px_20px_rgba(0,0,0,0.8),_inset_0_2px_10px_rgba(255,255,255,0.8)] flex items-center justify-center">
-                  <div className="w-12 h-12 rounded-full bg-slate-700 shadow-[inset_0_3px_8px_rgba(0,0,0,0.9),_0_2px_0_rgba(255,255,255,0.3)] flex items-center justify-center">
-                     {isBurst ? <Unlock className="text-green-400" /> : <Lock className="text-slate-400" />}
+               <div className="absolute right-[-40px] top-1/2 -translate-y-1/2 w-20 h-20 bg-gradient-to-br from-slate-300 to-slate-500 rounded-full border-8 border-slate-400 shadow-[0_10px_20px_rgba(0,0,0,0.8),_inset_0_2px_10px_rgba(255,255,255,0.8)] flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-slate-700 shadow-[inset_0_3px_8px_rgba(0,0,0,0.9),_0_2px_0_rgba(255,255,255,0.3)] flex items-center justify-center">
+                     {isBurst ? <Unlock size={18} className="text-green-400" /> : <Lock size={18} className="text-slate-400" />}
                   </div>
                </div>
             </div>
