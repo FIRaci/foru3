@@ -145,6 +145,14 @@ export default function App() {
     }
   };
 
+  // Auto-unlock when correct password is entered
+  useEffect(() => {
+    if (code.join('') === CORRECT_PASSWORD && !isBurst) {
+      setIsBurst(true);
+      triggerBurst();
+    }
+  }, [code, isBurst]);
+
   const handleUnlock = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (code.join('') === CORRECT_PASSWORD && !isBurst) {
@@ -235,16 +243,18 @@ export default function App() {
                   className="relative group cursor-pointer"
                 >
                   <div className="relative p-2 bg-white rounded-xl shadow-2xl border-4 border-slate-50 hover:-translate-y-3 hover:shadow-[0_30px_60px_rgba(0,0,0,0.2)] transition-all duration-300">
-                    <img
-                      src="/A gift.png"
-                      alt="A gift"
-                      className="w-[280px] sm:w-[360px] h-auto rounded-lg object-contain"
-                      onError={(e) => {
-                        e.currentTarget.src = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=400&auto=format&fit=crop';
-                      }}
-                    />
-                    <Sparkles className="absolute -top-6 -right-6 text-amber-400 w-12 h-12 animate-pulse" />
-                    <Sparkles className="absolute -bottom-4 -left-4 text-rose-400 w-8 h-8 animate-pulse" style={{ animationDelay: '200ms' }} />
+                    <a href={`${import.meta.env.BASE_URL}A gift.png`} download="A gift.png" className="block text-center cursor-pointer">
+                      <img
+                        src={`${import.meta.env.BASE_URL}A gift.png`}
+                        alt="A magical gift for you"
+                        className="w-[280px] sm:w-[360px] h-auto max-h-[400px] rounded-lg object-contain"
+                      />
+                      <p className="mt-4 mb-2 text-rose-500 font-bold animate-pulse text-lg" style={{ fontFamily: "'Caveat', cursive" }}>
+                         ✨ Click the image to claim and download it! ✨
+                      </p>
+                    </a>
+                    <Sparkles className="absolute -top-6 -right-6 text-amber-400 w-12 h-12 animate-pulse pointer-events-none" />
+                    <Sparkles className="absolute -bottom-4 -left-4 text-rose-400 w-8 h-8 animate-pulse pointer-events-none" style={{ animationDelay: '200ms' }} />
                   </div>
                 </motion.div>
               </motion.div>
