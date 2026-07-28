@@ -182,7 +182,7 @@ export default function App() {
 
         {/* ─── 2.5D OBLIQUE SAFE SCENE ─── */}
         <div
-          className="relative z-20 flex-shrink-0"
+          className={`relative flex-shrink-0 transition-all duration-1000 ${isBurst ? 'z-50' : 'z-20'}`}
           style={{ width: W + D, height: H + D }}
         >
           {/* Drop shadow on the floor */}
@@ -192,28 +192,28 @@ export default function App() {
           />
 
           {/* Gift Image — appears from behind the front face after unlock */}
-          <div className="absolute z-10 flex items-center justify-center" style={{ left: 0, top: D - 60, width: W, height: H }}>
+          <div className="absolute z-50 flex items-center justify-center" style={{ left: 0, top: D - 60, width: W, height: H }}>
             <AnimatePresence>
               {isBurst && (
                 <motion.div
                   initial={{ scale: 0, y: 100, opacity: 0 }}
-                  animate={{ scale: 1, y: 0, opacity: 1 }}
-                  transition={{ type: 'spring', bounce: 0.5, duration: 1, delay: 0.2 }}
+                  animate={{ scale: 1, y: -20, opacity: 1 }}
+                  transition={{ type: 'spring', bounce: 0.4, duration: 1.2, delay: 0.2 }}
                   className="relative group cursor-pointer"
                 >
-                  <div className="relative p-2 bg-white rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-4 border-slate-50 hover:-translate-y-3 hover:shadow-[0_30px_60px_rgba(0,0,0,0.4)] transition-all duration-300">
+                  <div className="relative p-3 sm:p-5 bg-white rounded-2xl shadow-[0_30px_60px_rgba(0,0,0,0.4)] border-4 border-slate-50 hover:-translate-y-3 hover:shadow-[0_40px_80px_rgba(0,0,0,0.6)] transition-all duration-300">
                     <a href={`${import.meta.env.BASE_URL}A gift.png`} download="A gift.png" className="block text-center cursor-pointer">
                       <img
                         src={`${import.meta.env.BASE_URL}A gift.png`}
                         alt="A magical gift for you"
-                        className="w-[280px] sm:w-[360px] h-auto max-h-[400px] rounded-lg object-contain"
+                        className="w-[90vw] max-w-[500px] sm:max-w-[650px] lg:max-w-[800px] xl:max-w-[900px] h-auto max-h-[75vh] rounded-xl object-contain"
                       />
-                      <p className="mt-4 mb-2 text-rose-500 font-bold animate-pulse text-lg" style={{ fontFamily: "'Caveat', cursive" }}>
+                      <p className="mt-4 mb-2 text-rose-500 font-bold animate-pulse text-xl sm:text-3xl" style={{ fontFamily: "'Caveat', cursive" }}>
                          ✨ Click the image to claim and download it! ✨
                       </p>
                     </a>
-                    <Sparkles className="absolute -top-6 -right-6 text-amber-400 w-12 h-12 animate-pulse pointer-events-none" />
-                    <Sparkles className="absolute -bottom-4 -left-4 text-rose-400 w-8 h-8 animate-pulse pointer-events-none" style={{ animationDelay: '200ms' }} />
+                    <Sparkles className="absolute -top-8 -right-8 text-amber-400 w-16 h-16 animate-pulse pointer-events-none" />
+                    <Sparkles className="absolute -bottom-6 -left-6 text-rose-400 w-12 h-12 animate-pulse pointer-events-none" style={{ animationDelay: '200ms' }} />
                   </div>
                 </motion.div>
               )}
