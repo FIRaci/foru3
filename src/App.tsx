@@ -1,483 +1,351 @@
-import { useState, useEffect, useRef } from 'react';
-import gsap from 'gsap';
+import { useState, useRef, useEffect } from 'react';
+import { Sparkles, RefreshCcw, PenTool, Eraser, ChevronUp, ChevronDown, Unlock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import gsap from 'gsap';
 import confetti from 'canvas-confetti';
-import { ChevronUp, ChevronDown, Lock, Unlock, Sparkles } from 'lucide-react';
 
 const WORDS = [
-  'beautiful',
-  'gorgeous',
-  'stunning',
-  'radiant',
-  'angelic',
-  'ethereal',
-  'captivating',
-  'elegant',
-  'lovely',
-  'adorable',
-  'cute',
-  'charming',
-  'precious',
-  'divine',
-  'heavenly',
-  'mesmerizing',
-  'flawless',
-  'perfect',
-  'incomparable',
-  'breathtaking',
-  'exquisite',
-  'luminous',
-  'graceful',
-  'dazzling',
-  'beloved',
-  'magnificent',
-  'sweet',
+  'beautiful', 'gorgeous', 'stunning', 'radiant', 'angelic',
+  'ethereal', 'captivating', 'elegant', 'lovely', 'adorable',
+  'cute', 'charming', 'precious', 'divine', 'heavenly',
+  'mesmerizing', 'flawless', 'perfect', 'incomparable',
+  'breathtaking', 'exquisite', 'luminous', 'graceful',
+  'dazzling', 'beloved', 'magnificent', 'sweet',
 ];
 
-const CORRECT_PASSWORD = [2, 8, 0, 4];
+const CORRECT_PASSWORD = '2804';
 
-export default function App() {
+// ─── Face Component ───────────────────────────────────────────────────────────
+const Face = ({ bg, transform, w, h, children, isFront = false }: {
+  bg: string; transform: string; w: number; h: number;
+  children?: React.ReactNode; isFront?: boolean;
+}) => (
+  <div className="shatter-piece absolute" style={{ transform, width: w, height: h, transformStyle: 'preserve-3d' }}>
+    <div className="absolute inset-0 overflow-hidden rounded-md" style={{ backgroundColor: bg }}>
+      {isFront ? (
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-400 via-slate-500 to-slate-700" />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-black/40 mix-blend-overlay" />
+      )}
+      <div className="absolute inset-0 shadow-[inset_0_0_40px_rgba(0,0,0,0.7)] border-2 border-slate-700/80 z-10 pointer-events-none" />
+      {/* Brushed metal texture */}
+      <div
+        className="absolute inset-0 opacity-10 pointer-events-none mix-blend-multiply"
+        style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, black 2px, black 4px)' }}
+      />
+      {isFront && (
+        <>
+          {/* Rivets */}
+          {['top-3 left-3', 'top-3 right-3', 'bottom-3 left-3', 'bottom-3 right-3'].map((pos) => (
+            <div key={pos} className={`absolute ${pos} w-3 h-3 rounded-full bg-slate-400 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.8),_inset_-1px_-1px_2px_rgba(0,0,0,0.5),_0_1px_3px_rgba(0,0,0,0.5)]`} />
+          ))}
+        </>
+      )}
+      {children}
+    </div>
+  </div>
+);
+
+// ─── Magic Note (Typewriter Effect) ──────────────────────────────────────────
+const MagicNote = () => {
+  const [text, setText] = useState('');
   const [wordIndex, setWordIndex] = useState(0);
-  const [code, setCode] = useState([0, 0, 0, 0]);
-  const [isUnlocked, setIsUnlocked] = useState(false);
-  const [isWrong, setIsWrong] = useState(false);
-
-  const lidRef = useRef<HTMLDivElement>(null);
-  const giftRef = useRef<HTMLDivElement>(null);
-  const lockRef = useRef<HTMLButtonElement>(null);
-  const boxRef = useRef<HTMLDivElement>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setWordIndex((prev) => (prev + 1) % WORDS.length);
-    }, 1800);
-    return () => clearInterval(interval);
-  }, []);
+    const currentWord = WORDS[wordIndex];
+    let timeout: ReturnType<typeof setTimeout>;
 
-  const handleLockClick = () => {
-    if (isUnlocked) return;
-
-    if (code.join('') === CORRECT_PASSWORD.join('')) {
-      setIsUnlocked(true);
-      triggerUnlockAnimation();
+    if (isDeleting) {
+      if (text === '') {
+        setIsDeleting(false);
+        setWordIndex((prev) => (prev + 1) % WORDS.length);
+      } else {
+        timeout = setTimeout(() => setText(text.substring(0, text.length - 1)), 50);
+      }
     } else {
-      // Wrong password — shake and flash red
-      setIsWrong(true);
+      if (text === currentWord) {
+        timeout = setTimeout(() => setIsDeleting(true), 1500);
+      } else {
+        timeout = setTimeout(() => setText(currentWord.substring(0, text.length + 1)), 100);
+      }
+    }
+
+    return () => clearTimeout(timeout);
+  }, [text, isDeleting, wordIndex]);
+
+  return (
+    <motion.div
+      initial={{ rotate: -4, opacity: 0, x: -30 }}
+      animate={{ rotate: -2, opacity: 1, x: 0 }}
+      transition={{ type: 'spring', delay: 0.2 }}
+      className="relative w-[340px] sm:w-[420px] p-8 pb-12 bg-[#fdfbf7] shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-sm origin-bottom-left flex-shrink-0 z-20"
+      style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")' }}
+    >
+      {/* Tape */}
+      <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-28 h-10 bg-white/40 backdrop-blur-md shadow-sm rotate-1 border border-white/50 z-10" />
+      {/* Red vertical lines */}
+      <div className="absolute top-0 bottom-0 left-8 w-px bg-red-400/50" />
+      <div className="absolute top-0 bottom-0 left-9 w-px bg-red-400/50" />
+      {/* Horizontal lines */}
+      <div className="absolute inset-0 pt-16 flex flex-col pointer-events-none overflow-hidden opacity-30">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="w-full h-[48px] border-b border-blue-500/50" />
+        ))}
+      </div>
+
+      <div
+        className="relative z-10 pl-8 mt-10 text-slate-800 text-[32px] leading-[48px]"
+        style={{ fontFamily: "'Caveat', cursive" }}
+      >
+        The password is the day of birth of the most
+        <br />
+        <span className="inline-flex relative min-w-[140px] items-center text-rose-600 font-bold italic align-middle px-2 drop-shadow-sm h-[48px]">
+          <span>{text}</span>
+          <motion.span
+            animate={{ opacity: [1, 0] }}
+            transition={{ repeat: Infinity, duration: 0.8 }}
+            className="ml-1 text-2xl -translate-y-1"
+          >
+            {isDeleting
+              ? <Eraser size={24} className="text-slate-400" />
+              : <PenTool size={24} className="text-rose-600" />}
+          </motion.span>
+        </span>
+        <br />
+        girl in this world.
+      </div>
+    </motion.div>
+  );
+};
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
+export default function App() {
+  const [isBurst, setIsBurst] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
+  const [code, setCode] = useState([0, 0, 0, 0]);
+
+  const safeRef = useRef<HTMLDivElement>(null);
+
+  const handleDigitChange = (e: React.MouseEvent, index: number, delta: number) => {
+    e.stopPropagation();
+    if (isBurst) return;
+    const newCode = [...code];
+    newCode[index] = (newCode[index] + delta + 10) % 10;
+    setCode(newCode);
+
+    // Subtle jiggle on click
+    if (safeRef.current) {
+      gsap.killTweensOf(safeRef.current);
       gsap.fromTo(
-        lockRef.current,
-        { x: -6, rotate: -8 },
-        {
-          x: 6,
-          rotate: 8,
-          duration: 0.06,
-          yoyo: true,
-          repeat: 7,
-          ease: 'power1.inOut',
-          onComplete: () => {
-            gsap.set(lockRef.current, { x: 0, rotate: 0 });
-            setTimeout(() => setIsWrong(false), 400);
-          },
-        }
+        safeRef.current,
+        { rotateX: -15 + (Math.random() - 0.5) * 2, rotateY: -25 + (Math.random() - 0.5) * 2 },
+        { rotateX: -15, rotateY: -25, duration: 0.3, ease: 'power2.out' }
       );
     }
   };
 
-  const triggerUnlockAnimation = () => {
-    const tl = gsap.timeline();
+  const handleUnlock = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (code.join('') === CORRECT_PASSWORD && !isBurst) {
+      setIsBurst(true);
+      triggerBurst();
+    } else if (!isBurst) {
+      // Shake for wrong password
+      if (safeRef.current) {
+        gsap.killTweensOf(safeRef.current);
+        gsap.fromTo(
+          safeRef.current,
+          { rotateZ: -5 },
+          { rotateZ: 0, duration: 0.5, ease: 'elastic.out(1, 0.3)' }
+        );
+      }
+    }
+  };
 
-    // Lock turns green then disappears
-    tl.to(lockRef.current, {
-      scale: 1.2,
-      duration: 0.2,
-    })
-      .to(lockRef.current, {
-        scale: 0,
+  const triggerBurst = () => {
+    // Continuous confetti cannons
+    const duration = 3000;
+    const end = Date.now() + duration;
+    const frame = () => {
+      confetti({ particleCount: 8, angle: 60, spread: 80, origin: { x: 0, y: 0.8 }, colors: ['#f43f5e', '#ec4899', '#ffffff', '#fbbf24'] });
+      confetti({ particleCount: 8, angle: 120, spread: 80, origin: { x: 1, y: 0.8 }, colors: ['#f43f5e', '#ec4899', '#ffffff', '#fbbf24'] });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    };
+    frame();
+
+    // Big center burst
+    confetti({ particleCount: 250, spread: 160, origin: { y: 0.4 }, colors: ['#f43f5e', '#ec4899', '#ffffff', '#fbbf24', '#fcd34d'] });
+
+    // Shatter each face
+    document.querySelectorAll('.shatter-piece').forEach((face) => {
+      gsap.to(face, {
+        x: (Math.random() - 0.5) * 3000,
+        y: (Math.random() - 0.5) * 3000 - 1000,
+        z: (Math.random() - 0.5) * 3000,
+        rotateX: Math.random() * 1440,
+        rotateY: Math.random() * 1440,
+        rotateZ: Math.random() * 1440,
         opacity: 0,
-        duration: 0.35,
-        ease: 'back.in(2)',
-      })
-      // Lid slides up and away
-      .to(
-        lidRef.current,
-        {
-          y: -220,
-          rotation: -12,
-          opacity: 0,
-          duration: 1,
-          ease: 'power3.inOut',
-        },
-        '-=0.1'
-      )
-      // Gift pops up
-      .fromTo(
-        giftRef.current,
-        { y: 80, scale: 0, opacity: 0 },
-        {
-          y: -40,
-          scale: 1,
-          opacity: 1,
-          duration: 1.4,
-          ease: 'elastic.out(1, 0.55)',
-        },
-        '-=0.6'
-      );
-
-    setTimeout(() => {
-      confetti({
-        particleCount: 200,
-        spread: 120,
-        origin: { y: 0.55 },
-        colors: ['#f43f5e', '#ec4899', '#fde047', '#3b82f6', '#10b981'],
-        zIndex: 100,
+        scale: Math.random() * 0.5 + 0.5,
+        duration: 1.5 + Math.random(),
+        ease: 'power4.out',
       });
-    }, 900);
-  };
-
-  const handleDial = (index: number, direction: 1 | -1) => {
-    if (isUnlocked) return;
-    setCode((prev) => {
-      const newCode = [...prev];
-      let val = newCode[index] + direction;
-      if (val > 9) val = 0;
-      if (val < 0) val = 9;
-      newCode[index] = val;
-      return newCode;
     });
+
+    // Hide shadow
+    gsap.to('.box-shadow', { opacity: 0, scale: 0, duration: 0.3 });
   };
 
-  // ─── Isometric box dimensions ───────────────────────────
-  // We draw three visible faces: Top, Front, Right
-  // using clip-path parallelograms — no preserve-3d, no translateZ.
-  const W = 260;   // box width (front face px)
-  const H = 170;   // box height (front face px)
-  const D = 100;   // depth offset in pixels (isometric slant)
-
-  // Lid dimensions (slightly larger)
-  const LW = W + 16;
-  const LH = 36;
-  const LD = D + 8;
+  const reset = () => {
+    setCode([0, 0, 0, 0]);
+    setIsBurst(false);
+    setResetKey((prev) => prev + 1);
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans overflow-hidden relative">
+    <div className="min-h-screen bg-white relative font-sans flex items-center justify-center overflow-hidden w-full">
       {/* Ambient background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div className="w-[60vw] h-[60vw] bg-pink-100/60 blur-[140px] rounded-full absolute -top-20 -left-20" />
-        <div className="w-[50vw] h-[50vw] bg-blue-100/60 blur-[140px] rounded-full absolute bottom-0 right-0" />
-        <div className="w-[35vw] h-[35vw] bg-yellow-50/40 blur-[100px] rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+        <div className="w-[50vw] h-[50vw] bg-blue-100/50 blur-[140px] rounded-full absolute bottom-0 right-0" />
       </div>
 
-      <div className="flex flex-col lg:flex-row items-center justify-center gap-20 lg:gap-36 w-full max-w-6xl z-10 px-4">
+      <div className="flex flex-col lg:flex-row items-center justify-center gap-24 w-full max-w-7xl mx-auto px-8 z-20">
+        <MagicNote />
 
-        {/* ─── MAGIC PAPER ─────────────────────────────────── */}
+        {/* 3D Scene */}
         <div
-          className="relative w-full max-w-[360px] aspect-[3/4] bg-[#fdf9f0] border border-[#e5dac8] rounded-sm p-8 flex flex-col justify-center flex-shrink-0"
-          style={{
-            boxShadow: '6px 10px 30px rgba(0,0,0,0.1), inset 0 0 100px rgba(180,155,110,0.08)',
-            transform: 'rotate(-2.5deg)',
-          }}
+          className="relative w-[300px] h-[400px] flex items-center justify-center z-20"
+          style={{ perspective: '4000px' }}
         >
-          {/* Lines */}
-          <div
-            className="absolute inset-0 opacity-[0.18] pointer-events-none"
-            style={{
-              backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, #8b7355 31px, #8b7355 32px)',
-              backgroundPosition: '0 44px',
-            }}
-          />
-          <div
-            className="relative z-10 text-slate-800 flex flex-col items-center text-center"
-            style={{ fontFamily: "'Homemade Apple', cursive", fontSize: '1.5rem', lineHeight: '1.9' }}
-          >
-            <p>The password is</p>
-            <p>day of birth of</p>
-            <p>the most</p>
-
-            <div className="h-24 w-full flex justify-center items-center relative my-3">
-              <AnimatePresence mode="popLayout">
-                <motion.span
-                  key={wordIndex}
-                  initial={{ opacity: 0, y: 16, filter: 'blur(6px)' }}
-                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)', color: '#be185d' }}
-                  exit={{ opacity: 0, y: -16, filter: 'blur(6px)' }}
-                  transition={{ duration: 0.65, ease: 'easeOut' }}
-                  className="absolute text-5xl font-bold whitespace-nowrap"
-                  style={{ fontFamily: "'Cedarville Cursive', cursive", transform: 'rotate(-4deg)' }}
+          {/* Gift Image — appears after unlock */}
+          <AnimatePresence>
+            {isBurst && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 flex items-center justify-center z-10"
+              >
+                <motion.div
+                  initial={{ scale: 0, y: 100, opacity: 0, rotateZ: -10 }}
+                  animate={{ scale: 1, y: -40, opacity: 1, rotateZ: 0 }}
+                  transition={{ type: 'spring', bounce: 0.5, duration: 1, delay: 0.1 }}
+                  className="relative group cursor-pointer"
                 >
-                  {WORDS[wordIndex]}
-                </motion.span>
-              </AnimatePresence>
-            </div>
-
-            <p>girl in this world.</p>
-          </div>
-        </div>
-
-        {/* ─── ISOMETRIC BOX ───────────────────────────────── */}
-        {/* 
-          We draw the box using 3 plain divs arranged like an isometric cube:
-            - Front face  (rectangle, bottom-left)
-            - Right face  (skewed parallelogram, bottom-right)
-            - Top face    (skewed parallelogram, top)
-            - Lid         (separate element on top, animates away)
-          No preserve-3d. No translateZ. Just math.
-        */}
-        <div
-          ref={boxRef}
-          className="relative flex-shrink-0"
-          style={{
-            // Total canvas: W + D wide, H + D tall (+ some extra for lid and gift overflow)
-            width: W + D + 40,
-            height: H + D + 160,
-          }}
-        >
-          {/* Gift image (hidden, pops up from center of box) */}
-          <div
-            ref={giftRef}
-            className="absolute z-30 flex items-center justify-center"
-            style={{
-              width: W,
-              left: 20,
-              // Vertically centered in the box front face area
-              top: D + 20,
-              opacity: 0,
-              pointerEvents: isUnlocked ? 'auto' : 'none',
-            }}
-          >
-            <div className="relative flex items-center justify-center">
-              <div className="absolute inset-0 bg-yellow-300/50 blur-[50px] scale-150 rounded-full" />
-              <img
-                src="/A gift.png"
-                alt="A magical gift"
-                className="w-48 h-48 object-contain relative z-10"
-                style={{ filter: 'drop-shadow(0 0 30px rgba(250,204,21,0.9))' }}
-                onError={(e) => {
-                  e.currentTarget.src =
-                    'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=400&auto=format&fit=crop';
-                }}
-              />
-              {isUnlocked &&
-                Array.from({ length: 10 }).map((_, i) => (
-                  <motion.div
-                    key={i}
-                    className="absolute text-yellow-300"
-                    style={{
-                      left: `${50 + (Math.random() - 0.5) * 160}%`,
-                      top: `${50 + (Math.random() - 0.5) * 160}%`,
-                    }}
-                    animate={{ y: [0, -40, 0], opacity: [0, 1, 0], scale: [0.5, 1.4, 0.5] }}
-                    transition={{ duration: 1.5 + Math.random(), repeat: Infinity, delay: Math.random() }}
-                  >
-                    <Sparkles size={14 + Math.random() * 18} />
-                  </motion.div>
-                ))}
-            </div>
-          </div>
-
-          {/* ── LID (sits above the box body, animates away on unlock) ── */}
-          <div
-            ref={lidRef}
-            className="absolute z-20"
-            style={{
-              top: 0,
-              left: 0,
-              width: LW + LD,
-              height: LH + LD,
-              // This wrapper will be animated by GSAP (y, opacity)
-            }}
-          >
-            {/* Lid Top face */}
-            <div
-              className="absolute"
-              style={{
-                width: LW,
-                height: LD,
-                top: 0,
-                left: LD,
-                background: 'linear-gradient(135deg, #64748b, #334155)',
-                clipPath: `polygon(0 ${LD}px, ${LW}px ${LD}px, ${LW + LD}px 0, ${LD}px 0)`,
-                // That gives a top-face parallelogram
-              }}
-            />
-            {/* Lid Right face */}
-            <div
-              className="absolute"
-              style={{
-                width: LD,
-                height: LH,
-                top: LD,
-                left: LW,
-                background: 'linear-gradient(180deg, #475569, #1e293b)',
-                clipPath: `polygon(0 0, ${LD}px -${LD}px, ${LD}px ${LH}px, 0 ${LH + LD}px)`,
-              }}
-            />
-            {/* Lid Front face */}
-            <div
-              className="absolute flex items-center justify-center"
-              style={{
-                width: LW,
-                height: LH,
-                top: LD,
-                left: 0,
-                background: 'linear-gradient(180deg, #64748b, #334155)',
-                border: '1px solid rgba(250,204,21,0.5)',
-                boxShadow: 'inset 0 2px 8px rgba(255,255,255,0.1)',
-              }}
-            >
-              {/* Gold decorative strip */}
-              <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
-
-              {/* LOCK BUTTON — centered on front of lid */}
-              <button
-                ref={lockRef}
-                onClick={handleLockClick}
-                disabled={isUnlocked}
-                className="absolute -bottom-8 w-16 h-16 rounded-full flex items-center justify-center z-30 cursor-pointer outline-none transition-transform hover:scale-110 active:scale-90"
-                style={{
-                  background: isWrong
-                    ? 'linear-gradient(135deg, #ef4444, #b91c1c)'
-                    : 'linear-gradient(135deg, #fbbf24, #d97706)',
-                  border: '4px solid #1e293b',
-                  boxShadow: isWrong
-                    ? '0 8px 20px rgba(220,38,38,0.7), inset 0 3px 8px rgba(255,255,255,0.5)'
-                    : '0 8px 20px rgba(0,0,0,0.6), inset 0 3px 8px rgba(255,255,255,0.6)',
-                  color: '#1e293b',
-                }}
-              >
-                <div className="absolute inset-1 rounded-full border border-white/30 pointer-events-none" />
-                {isUnlocked ? <Unlock size={24} strokeWidth={3} /> : <Lock size={24} strokeWidth={3} />}
-              </button>
-            </div>
-          </div>
-
-          {/* ── BOX BODY ── */}
-          {/* Positioned below the lid */}
-          <div
-            className="absolute"
-            style={{
-              top: LH + LD - 2, // -2 so lid and body overlap by 2px (seamless)
-              left: 0,
-              width: W + D,
-              height: H + D,
-            }}
-          >
-            {/* Top face of box body (visible when lid is off) */}
-            <div
-              className="absolute"
-              style={{
-                width: W,
-                height: D,
-                top: 0,
-                left: D,
-                background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-                clipPath: `polygon(0 ${D}px, ${W}px ${D}px, ${W + D}px 0, ${D}px 0)`,
-                boxShadow: 'inset 0 0 30px rgba(0,0,0,0.8)',
-              }}
-            />
-
-            {/* Right face */}
-            <div
-              className="absolute"
-              style={{
-                width: D,
-                height: H,
-                top: D,
-                left: W,
-                background: 'linear-gradient(180deg, #334155, #0f172a)',
-                clipPath: `polygon(0 0, ${D}px -${D}px, ${D}px ${H}px, 0 ${H + D}px)`,
-                boxShadow: 'inset -10px 0 20px rgba(0,0,0,0.6)',
-              }}
-            />
-
-            {/* Front face */}
-            <div
-              className="absolute flex items-center justify-center"
-              style={{
-                width: W,
-                height: H,
-                top: D,
-                left: 0,
-                background: 'linear-gradient(180deg, #475569 0%, #1e293b 60%, #0f172a 100%)',
-                border: '1px solid rgba(250,204,21,0.35)',
-                boxShadow:
-                  'inset 0 0 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1), 0 20px 40px rgba(0,0,0,0.4)',
-              }}
-            >
-              {/* Gold trim lines */}
-              <div className="absolute inset-3 border border-amber-500/25 pointer-events-none" />
-              <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400/50 to-transparent" />
-
-              {/* ── MECHANICAL DIALS ── */}
-              <div
-                className="flex gap-3 items-center p-4 rounded-xl"
-                style={{
-                  background: '#0a0f1a',
-                  boxShadow: 'inset 0 8px 30px rgba(0,0,0,1), 0 2px 0 rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                }}
-              >
-                {code.map((num, idx) => (
-                  <div key={idx} className="flex flex-col items-center gap-1.5">
-                    <button
-                      onClick={() => handleDial(idx, 1)}
-                      className="text-slate-500 hover:text-amber-400 transition-colors p-1 disabled:opacity-40"
-                      disabled={isUnlocked}
-                    >
-                      <ChevronUp size={20} strokeWidth={4} />
-                    </button>
-
-                    {/* Wheel */}
-                    <div
-                      className="w-12 h-16 flex items-center justify-center overflow-hidden relative rounded"
-                      style={{
-                        background: 'linear-gradient(180deg, #cbd5e1 0%, #f8fafc 40%, #f1f5f9 60%, #94a3b8 100%)',
-                        border: '2px solid #334155',
-                        boxShadow: 'inset 0 6px 12px rgba(0,0,0,0.5), inset 0 -6px 12px rgba(0,0,0,0.5)',
+                  <div className="relative p-2 bg-white rounded-xl shadow-2xl border-4 border-slate-50 hover:-translate-y-3 hover:shadow-[0_30px_60px_rgba(0,0,0,0.2)] transition-all duration-300">
+                    <img
+                      src="/A gift.png"
+                      alt="A gift"
+                      className="w-[280px] sm:w-[360px] h-auto rounded-lg object-contain"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=400&auto=format&fit=crop';
                       }}
-                    >
-                      <AnimatePresence mode="popLayout">
-                        <motion.span
-                          key={num}
-                          initial={{ y: 22, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          exit={{ y: -22, opacity: 0 }}
-                          transition={{ duration: 0.18 }}
-                          className="text-3xl font-black font-mono text-slate-800 relative z-10"
-                          style={{ textShadow: '0 1px 0 rgba(255,255,255,0.9)' }}
-                        >
-                          {num}
-                        </motion.span>
-                      </AnimatePresence>
-                    </div>
+                    />
+                    <Sparkles className="absolute -top-6 -right-6 text-amber-400 w-12 h-12 animate-pulse" />
+                    <Sparkles className="absolute -bottom-4 -left-4 text-rose-400 w-8 h-8 animate-pulse" style={{ animationDelay: '200ms' }} />
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
+          {/* The 3D Safe */}
+          <div
+            key={resetKey}
+            className="relative w-[240px] h-[240px] z-30"
+            style={{ transformStyle: 'preserve-3d' }}
+          >
+            <div
+              ref={safeRef}
+              className="absolute inset-0"
+              style={{ transformStyle: 'preserve-3d', transform: 'rotateX(-15deg) rotateY(-25deg)' }}
+            >
+              {/* Drop shadow */}
+              <div
+                className="box-shadow absolute top-1/2 left-1/2 w-[350px] h-[350px] bg-black/15 blur-2xl rounded-full pointer-events-none"
+                style={{ transform: 'translate(-50%, -50%) translateY(120px) rotateX(90deg)' }}
+              />
+
+              {/* Safe Body (240×240×240) */}
+              <div className="absolute inset-0" style={{ transformStyle: 'preserve-3d' }}>
+                {/* Front face (+Z) */}
+                <Face bg="#94a3b8" isFront transform="translateZ(120px)" w={240} h={240}>
+                  {/* Safe Door Inner Frame */}
+                  <div className="absolute inset-5 border-[3px] border-slate-600/50 rounded shadow-[0_0_20px_rgba(0,0,0,0.4)] pointer-events-none bg-slate-400/10" />
+                  {/* Hinges */}
+                  <div className="absolute left-0 top-12 w-2 h-10 bg-slate-600 border-r border-slate-800 shadow-md" />
+                  <div className="absolute left-0 bottom-12 w-2 h-10 bg-slate-600 border-r border-slate-800 shadow-md" />
+
+                  {/* Digit Dials */}
+                  <div className="absolute left-6 top-1/2 -translate-y-1/2 flex items-center justify-center gap-1.5 bg-slate-900 p-3 rounded-lg shadow-[inset_0_4px_15px_rgba(0,0,0,0.9),_0_2px_0_rgba(255,255,255,0.2)] border border-slate-700 pointer-events-auto z-20">
+                    {code.map((num, idx) => (
+                      <div key={idx} className="flex flex-col items-center">
+                        <button
+                          onClick={(e) => handleDigitChange(e, idx, 1)}
+                          className="w-full text-slate-400 hover:text-white pb-1 flex justify-center"
+                        >
+                          <ChevronUp size={16} strokeWidth={3} />
+                        </button>
+                        <div className="relative w-8 h-10 bg-gradient-to-b from-slate-200 via-slate-300 to-slate-400 rounded-sm text-center leading-[40px] font-mono font-bold text-slate-900 text-2xl shadow-[inset_0_2px_5px_rgba(0,0,0,0.4)] select-none border-b border-slate-500 overflow-hidden">
+                          <div className="absolute top-1/2 left-0 w-full h-px bg-black/20 pointer-events-none shadow-[0_1px_0_rgba(255,255,255,0.5)]" />
+                          {num}
+                        </div>
+                        <button
+                          onClick={(e) => handleDigitChange(e, idx, -1)}
+                          className="w-full text-slate-400 hover:text-white pt-1 flex justify-center"
+                        >
+                          <ChevronDown size={16} strokeWidth={3} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Safe Handle / Unlock Button */}
+                  <div className="absolute right-6 top-1/2 -translate-y-1/2 w-16 h-16 flex items-center justify-center pointer-events-auto drop-shadow-2xl z-20">
                     <button
-                      onClick={() => handleDial(idx, -1)}
-                      className="text-slate-500 hover:text-amber-400 transition-colors p-1 disabled:opacity-40"
-                      disabled={isUnlocked}
+                      onClick={handleUnlock}
+                      className="w-14 h-14 rounded-full bg-gradient-to-br from-slate-300 to-slate-500 border-4 border-slate-600 shadow-[0_5px_15px_rgba(0,0,0,0.5),_inset_0_2px_5px_rgba(255,255,255,0.6)] flex items-center justify-center hover:scale-105 active:scale-95 transition-all group"
                     >
-                      <ChevronDown size={20} strokeWidth={4} />
+                      <div className="w-6 h-6 rounded-full bg-slate-700 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] flex items-center justify-center group-active:bg-green-500 transition-colors">
+                        <Unlock size={12} className="text-slate-300 group-active:text-white" />
+                      </div>
                     </button>
                   </div>
-                ))}
+                </Face>
+
+                {/* Right face (+X) */}
+                <Face bg="#64748b" transform="rotateY(90deg) translateZ(120px)" w={240} h={240} />
+                {/* Back face (-Z) */}
+                <Face bg="#475569" transform="rotateY(180deg) translateZ(120px)" w={240} h={240} />
+                {/* Left face (-X) */}
+                <Face bg="#cbd5e1" transform="rotateY(-90deg) translateZ(120px)" w={240} h={240} />
+                {/* Top face (-Y) */}
+                <Face bg="#e2e8f0" transform="rotateX(90deg) translateZ(120px)" w={240} h={240} />
+                {/* Bottom face (+Y) */}
+                <Face bg="#334155" transform="rotateX(-90deg) translateZ(120px)" w={240} h={240} />
               </div>
             </div>
-
-            {/* Bottom face */}
-            <div
-              className="absolute"
-              style={{
-                width: W,
-                height: D,
-                top: H + D,
-                left: D,
-                background: 'linear-gradient(135deg, #0f172a, #020617)',
-                clipPath: `polygon(0 0, ${W}px 0, ${W + D}px -${D}px, ${D}px -${D}px)`,
-                boxShadow: '0 20px 40px rgba(0,0,0,0.9)',
-              }}
-            />
           </div>
         </div>
       </div>
+
+      {/* Reset button */}
+      <AnimatePresence>
+        {isBurst && (
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.5 }}
+            onClick={reset}
+            className="absolute bottom-12 px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold text-lg rounded-full transition-all shadow-2xl z-50 cursor-pointer flex items-center gap-3 hover:-translate-y-1"
+          >
+            <RefreshCcw size={24} />
+            Khóa Lại
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
