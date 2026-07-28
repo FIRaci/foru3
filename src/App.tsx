@@ -167,32 +167,7 @@ export default function App() {
     });
   };
 
-  // Mouse Parallax Effect for the 3D Box
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!boxContainerRef.current || isUnlocked) return;
-    const { clientX, clientY } = e;
-    const { innerWidth, innerHeight } = window;
-    const x = (clientX / innerWidth - 0.5) * 2;
-    const y = (clientY / innerHeight - 0.5) * 2;
-    
-    gsap.to(boxContainerRef.current, {
-      rotateX: -15 - y * 10,
-      rotateY: -25 + x * 15,
-      duration: 0.8,
-      ease: 'power2.out',
-    });
-  };
-
-  const handleMouseLeave = () => {
-    if (!boxContainerRef.current || isUnlocked) return;
-    gsap.to(boxContainerRef.current, {
-      rotateX: -15,
-      rotateY: -25,
-      duration: 1.2,
-      ease: 'power3.out',
-    });
-  };
-
+  // Remove mouse parallax, just keep a static beautiful angle
   // 3D CSS values for the box body (Cube)
   const w = 260, h = 160, d = 220;
   // Lid overlaps slightly
@@ -201,8 +176,6 @@ export default function App() {
   return (
     <div 
       className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans overflow-hidden relative"
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
     >
       {/* Ambient background light */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0">
@@ -290,51 +263,51 @@ export default function App() {
             {/* ================= BOX BODY ================= */}
             
             {/* Bottom (Inner Floor) */}
-            <div className="absolute bg-slate-950 shadow-[0_0_100px_rgba(0,0,0,0.8)]"
+            <div className="absolute left-1/2 top-1/2 bg-slate-950 shadow-[0_0_100px_rgba(0,0,0,0.8)]"
                  style={{ 
                    width: w, height: d, 
-                   transform: `translateY(${h/2 - d/2}px) translateZ(0) rotateX(-90deg)`,
+                   transform: `translate(-50%, -50%) translateY(${h/2}px) rotateX(-90deg)`,
                    border: '2px solid rgba(250,204,21,0.2)',
                  }} />
             
-            {/* Top (Open Opening - slightly dark interior) */}
-            <div className="absolute border-4 border-amber-500/50 bg-slate-950/95 backdrop-blur-md"
+            {/* Top (Open Opening) */}
+            <div className="absolute left-1/2 top-1/2 border-4 border-amber-500/50 bg-slate-900/90"
                  style={{ 
                    width: w, height: d, 
-                   transform: `translateY(${-h/2 + d/2}px) translateZ(0) rotateX(90deg)`,
+                   transform: `translate(-50%, -50%) translateY(${-h/2}px) rotateX(90deg)`,
                    boxShadow: 'inset 0 0 80px rgba(0,0,0,1)'
                  }} />
 
             {/* Back */}
-            <div className="absolute bg-gradient-to-t from-slate-950 to-slate-800/90 backdrop-blur-sm"
+            <div className="absolute left-1/2 top-1/2 bg-gradient-to-t from-slate-950 to-slate-800"
                  style={{ 
                    width: w, height: h, 
-                   transform: `translateZ(${-d/2}px) rotateY(180deg)`,
+                   transform: `translate(-50%, -50%) translateZ(${-d/2}px) rotateY(180deg)`,
                    border: '1px solid rgba(250,204,21,0.3)',
                  }} />
             
             {/* Right */}
-            <div className="absolute bg-gradient-to-bl from-slate-800/90 to-slate-950 backdrop-blur-sm"
+            <div className="absolute left-1/2 top-1/2 bg-gradient-to-bl from-slate-800 to-slate-950"
                  style={{ 
                    width: d, height: h, 
-                   transform: `translateX(${w/2 - d/2}px) translateZ(0) rotateY(90deg)`,
+                   transform: `translate(-50%, -50%) translateX(${w/2}px) rotateY(90deg)`,
                    border: '1px solid rgba(250,204,21,0.3)',
                  }} />
             
             {/* Left */}
-            <div className="absolute bg-gradient-to-br from-slate-700/90 to-slate-900/95 backdrop-blur-sm"
+            <div className="absolute left-1/2 top-1/2 bg-gradient-to-br from-slate-700 to-slate-900"
                  style={{ 
                    width: d, height: h, 
-                   transform: `translateX(${-w/2 + d/2}px) translateZ(0) rotateY(-90deg)`,
+                   transform: `translate(-50%, -50%) translateX(${-w/2}px) rotateY(-90deg)`,
                    border: '1px solid rgba(250,204,21,0.3)',
                    boxShadow: 'inset -20px 0 50px rgba(0,0,0,0.5)'
                  }} />
             
             {/* Front */}
-            <div className="absolute bg-gradient-to-b from-slate-800/95 to-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-10"
+            <div className="absolute left-1/2 top-1/2 bg-gradient-to-b from-slate-800 to-slate-950 flex flex-col items-center justify-center z-10"
                  style={{ 
                    width: w, height: h, 
-                   transform: `translateZ(${d/2}px)`,
+                   transform: `translate(-50%, -50%) translateZ(${d/2}px)`,
                    border: '1px solid rgba(250,204,21,0.4)',
                    boxShadow: '0 40px 80px rgba(0,0,0,0.6), inset 0 0 30px rgba(250,204,21,0.1)'
                  }}>
@@ -449,30 +422,31 @@ export default function App() {
             {/* ================= BOX LID ================= */}
             <div 
               ref={lidRef}
-              className="absolute" 
+              className="absolute left-1/2 top-1/2" 
               style={{ 
-                left: `50%`, 
-                top: `0`, 
-                transform: `translate3d(-50%, ${-h/2}px, ${-d/2}px)`,
                 width: lw, 
                 height: ld,
+                // Move the lid container to sit on top of the box body, hinged at the back edge
+                // The center of this container is shifted up by h/2 and back by d/2
+                transform: `translate(-50%, -50%) translateY(${-h/2}px) translateZ(${-d/2}px)`,
                 transformStyle: 'preserve-3d',
-                transformOrigin: `50% 50% 0`,
+                transformOrigin: `50% 50% 0`, // Hinge at the back
               }}
             >
               <div 
-                className="absolute"
+                className="absolute left-1/2 top-1/2"
                 style={{
                    width: '100%', height: '100%',
                    transformStyle: 'preserve-3d',
-                   transform: `translateZ(${ld/2}px)`
+                   // The lid geometry is centered on this container. We need to shift it forward by ld/2 so it covers the box.
+                   transform: `translate(-50%, -50%) translateZ(${ld/2}px)`
                 }}
               >
                   {/* Lid Top */}
-                  <div className="absolute bg-gradient-to-br from-slate-700/95 to-slate-900/95 backdrop-blur-md shadow-[0_-15px_30px_rgba(0,0,0,0.4)]"
+                  <div className="absolute left-1/2 top-1/2 bg-gradient-to-br from-slate-700 to-slate-900 shadow-[0_-15px_30px_rgba(0,0,0,0.4)]"
                       style={{ 
                         width: lw, height: ld, 
-                        transform: `translateY(${-lh/2 + ld/2}px) rotateX(90deg)`,
+                        transform: `translate(-50%, -50%) translateY(${-lh/2}px) rotateX(90deg)`,
                         border: '1px solid rgba(250,204,21,0.5)',
                       }}>
                     <div className="absolute inset-3 border-2 border-amber-500/40 rounded-sm" style={{ boxShadow: 'inset 0 0 20px rgba(250,204,21,0.2)' }} />
@@ -480,17 +454,17 @@ export default function App() {
                   </div>
                   
                   {/* Lid Bottom (Inner lid) */}
-                  <div className="absolute border border-slate-900 bg-slate-950 shadow-[inset_0_0_50px_rgba(0,0,0,1)]"
+                  <div className="absolute left-1/2 top-1/2 border border-slate-900 bg-slate-950 shadow-[inset_0_0_50px_rgba(0,0,0,1)]"
                       style={{ 
                         width: lw, height: ld, 
-                        transform: `translateY(${lh/2 - ld/2}px) rotateX(-90deg)` 
+                        transform: `translate(-50%, -50%) translateY(${lh/2}px) rotateX(-90deg)` 
                       }} />
                       
                   {/* Lid Front */}
-                  <div className="absolute bg-gradient-to-b from-slate-700/95 to-slate-900/95 backdrop-blur-md flex items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
+                  <div className="absolute left-1/2 top-1/2 bg-gradient-to-b from-slate-700 to-slate-900 flex items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
                       style={{ 
                         width: lw, height: lh, 
-                        transform: `translateZ(${ld/2}px)`,
+                        transform: `translate(-50%, -50%) translateZ(${ld/2}px)`,
                         border: '1px solid rgba(250,204,21,0.4)',
                       }}>
                     <div className="absolute inset-1 border border-amber-500/30 rounded-sm" />
@@ -509,26 +483,26 @@ export default function App() {
                   </div>
                   
                   {/* Lid Back */}
-                  <div className="absolute bg-slate-900/95 backdrop-blur-sm"
+                  <div className="absolute left-1/2 top-1/2 bg-slate-900"
                       style={{ 
                         width: lw, height: lh, 
-                        transform: `translateZ(${-ld/2}px) rotateY(180deg)`,
+                        transform: `translate(-50%, -50%) translateZ(${-ld/2}px) rotateY(180deg)`,
                         border: '1px solid rgba(250,204,21,0.3)',
                       }} />
                       
                   {/* Lid Right */}
-                  <div className="absolute bg-gradient-to-bl from-slate-700/90 to-slate-900/95 backdrop-blur-sm"
+                  <div className="absolute left-1/2 top-1/2 bg-gradient-to-bl from-slate-700 to-slate-900"
                       style={{ 
                         width: ld, height: lh, 
-                        transform: `translateX(${lw/2 - ld/2}px) translateZ(0) rotateY(90deg)`,
+                        transform: `translate(-50%, -50%) translateX(${lw/2}px) rotateY(90deg)`,
                         border: '1px solid rgba(250,204,21,0.3)',
                       }} />
                       
                   {/* Lid Left */}
-                  <div className="absolute bg-gradient-to-br from-slate-600/90 to-slate-800/95 backdrop-blur-sm"
+                  <div className="absolute left-1/2 top-1/2 bg-gradient-to-br from-slate-600 to-slate-800"
                       style={{ 
                         width: ld, height: lh, 
-                        transform: `translateX(${-lw/2 + ld/2}px) translateZ(0) rotateY(-90deg)`,
+                        transform: `translate(-50%, -50%) translateX(${-lw/2}px) rotateY(-90deg)`,
                         border: '1px solid rgba(250,204,21,0.3)',
                       }} />
               </div>
