@@ -92,6 +92,14 @@ export default function App() {
   const [currentImage, setCurrentImage] = useState(0);
   const images = ['1.png', '2.png'];
 
+  // Preload images to avoid loading delay when the safe is opened
+  useEffect(() => {
+    images.forEach(src => {
+      const img = new Image();
+      img.src = `${import.meta.env.BASE_URL}${src}`;
+    });
+  }, []);
+
   const frontRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
