@@ -192,14 +192,14 @@ export default function App() {
           />
 
           {/* Gift Image — appears from behind the front face after unlock */}
-          <div className="absolute z-50 flex items-center justify-center" style={{ left: 0, top: D - 60, width: W, height: H }}>
+          <div className="absolute z-50 flex items-center justify-center pointer-events-none" style={{ left: 0, top: D - 60, width: W, height: H }}>
             <AnimatePresence>
               {isBurst && (
                 <motion.div
                   initial={{ scale: 0, y: 100, opacity: 0 }}
                   animate={{ scale: 1, y: -20, opacity: 1 }}
                   transition={{ type: 'spring', bounce: 0.4, duration: 1.2, delay: 0.2 }}
-                  className="relative group cursor-pointer"
+                  className="relative group cursor-pointer pointer-events-auto"
                 >
                   <div className="relative p-3 sm:p-5 bg-white rounded-2xl shadow-[0_30px_60px_rgba(0,0,0,0.4)] border-4 border-slate-50 hover:-translate-y-3 hover:shadow-[0_40px_80px_rgba(0,0,0,0.6)] transition-all duration-300">
                     <a href={`${import.meta.env.BASE_URL}A gift.png`} download="A gift.png" className="block text-center cursor-pointer">
