@@ -7,12 +7,31 @@ import { ChevronUp, ChevronDown, Lock, Unlock, Sparkles } from 'lucide-react';
 const WORDS = [
   'beautiful',
   'gorgeous',
-  'elegant',
-  'cutest',
   'stunning',
+  'radiant',
+  'angelic',
+  'ethereal',
+  'captivating',
+  'elegant',
+  'lovely',
+  'adorable',
+  'cute',
   'charming',
   'precious',
-  'angelic',
+  'divine',
+  'heavenly',
+  'mesmerizing',
+  'flawless',
+  'perfect',
+  'incomparable',
+  'breathtaking',
+  'exquisite',
+  'luminous',
+  'graceful',
+  'dazzling',
+  'beloved',
+  'magnificent',
+  'sweet',
 ];
 
 const CORRECT_PASSWORD = [2, 8, 0, 4];
@@ -24,81 +43,106 @@ export default function App() {
 
   const lidRef = useRef<HTMLDivElement>(null);
   const giftRef = useRef<HTMLDivElement>(null);
-  const lockRef = useRef<HTMLDivElement>(null);
+  const lockRef = useRef<HTMLButtonElement>(null);
   const boxContainerRef = useRef<HTMLDivElement>(null);
 
   // Magic word interval
   useEffect(() => {
     const interval = setInterval(() => {
       setWordIndex((prev) => (prev + 1) % WORDS.length);
-    }, 1500);
+    }, 1800); // Slightly longer for the longer phrases
     return () => clearInterval(interval);
   }, []);
 
-  // Check password
-  useEffect(() => {
-    if (code.join('') === CORRECT_PASSWORD.join('') && !isUnlocked) {
+  const handleLockClick = () => {
+    if (isUnlocked) return;
+    
+    // Play a tiny click animation on the button itself
+    gsap.fromTo(lockRef.current, { scale: 0.9 }, { scale: 1, duration: 0.1 });
+
+    if (code.join('') === CORRECT_PASSWORD.join('')) {
       setIsUnlocked(true);
       triggerUnlockAnimation();
+    } else {
+      // Wrong password animation (Shake and flash red)
+      gsap.fromTo(lockRef.current, 
+        { x: -5, rotate: -10 },
+        { 
+          x: 5, rotate: 10, 
+          duration: 0.05, 
+          yoyo: true, 
+          repeat: 7, 
+          ease: "power1.inOut",
+          onComplete: () => {
+            gsap.set(lockRef.current, { x: 0, rotate: 0 });
+          }
+        }
+      );
+      
+      // Flash red color
+      gsap.to(lockRef.current, {
+        backgroundColor: '#dc2626', // red-600
+        borderColor: '#991b1b',
+        boxShadow: '0 0 20px rgba(220, 38, 38, 0.8)',
+        duration: 0.2,
+        yoyo: true,
+        repeat: 1,
+        onComplete: () => {
+          gsap.set(lockRef.current, { clearProps: 'backgroundColor,borderColor,boxShadow' });
+        }
+      });
     }
-  }, [code, isUnlocked]);
+  };
 
   const triggerUnlockAnimation = () => {
     const tl = gsap.timeline();
 
-    // 1. Shake the lock
+    // 1. Lock turns green & pops
     tl.to(lockRef.current, {
-      x: 3,
+      scale: 1.15,
+      backgroundColor: '#10b981',
+      borderColor: '#059669',
+      boxShadow: '0 0 30px rgba(16,185,129,0.8), inset 0 2px 5px rgba(255,255,255,0.6)',
+      duration: 0.2,
+    })
+    .to(lockRef.current, {
+      scale: 0,
+      opacity: 0,
+      duration: 0.4,
+      ease: 'back.in(1.5)',
+    })
+    // 2. Shake the whole box slightly with glowing effects
+    .to(boxContainerRef.current, {
+      x: 4,
       duration: 0.05,
       yoyo: true,
-      repeat: 6,
+      repeat: 4,
+    }, "-=0.2")
+    // Reset rotation back to center for dramatic effect
+    .to(boxContainerRef.current, {
+      rotateX: -10,
+      rotateY: -20,
+      duration: 0.5,
+    }, "-=0.2")
+    // 3. Lid opens backwards (hinge at the back)
+    .to(lidRef.current, {
+      rotateX: 115,
+      duration: 1.5,
+      ease: 'power3.inOut',
     })
-      // 2. Lock turns green & pops
-      .to(lockRef.current, {
-        scale: 1.15,
-        color: '#10b981',
-        borderColor: '#059669',
-        boxShadow: '0 0 30px rgba(16,185,129,0.8), inset 0 2px 5px rgba(255,255,255,0.6)',
-        duration: 0.2,
-      })
-      .to(lockRef.current, {
-        scale: 0,
-        opacity: 0,
-        duration: 0.4,
-        ease: 'back.in(1.5)',
-      })
-      // 3. Shake the whole box slightly
-      .to(boxContainerRef.current, {
-        x: 4,
-        duration: 0.05,
-        yoyo: true,
-        repeat: 4,
-      }, "-=0.2")
-      // Reset rotation back to center for dramatic effect
-      .to(boxContainerRef.current, {
-        rotateX: -10,
-        rotateY: -20,
-        duration: 0.5,
-      }, "-=0.2")
-      // 4. Lid opens backwards (hinge at the back)
-      .to(lidRef.current, {
-        rotateX: 115,
-        duration: 1.5,
-        ease: 'power3.inOut',
-      })
-      // 5. Gift pops out from inside
-      .to(
-        giftRef.current,
-        {
-          scale: 1,
-          opacity: 1,
-          y: -100, // Move up out of the box
-          rotateY: 720, // Spin multiple times
-          duration: 2.5,
-          ease: 'elastic.out(1, 0.6)',
-        },
-        '-=1'
-      );
+    // 4. Gift pops out from inside
+    .to(
+      giftRef.current,
+      {
+        scale: 1.2, // slightly bigger
+        opacity: 1,
+        y: -100, // Move up out of the box
+        rotateY: 720, // Spin multiple times
+        duration: 2.5,
+        ease: 'elastic.out(1, 0.6)',
+      },
+      '-=1'
+    );
 
     setTimeout(() => {
       confetti({
@@ -126,17 +170,14 @@ export default function App() {
   // Mouse Parallax Effect for the 3D Box
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!boxContainerRef.current || isUnlocked) return;
-    
-    // Get mouse position relative to the center of the screen
     const { clientX, clientY } = e;
     const { innerWidth, innerHeight } = window;
-    const x = (clientX / innerWidth - 0.5) * 2; // -1 to 1
-    const y = (clientY / innerHeight - 0.5) * 2; // -1 to 1
+    const x = (clientX / innerWidth - 0.5) * 2;
+    const y = (clientY / innerHeight - 0.5) * 2;
     
-    // Apply subtle rotation (base rotation + mouse offset)
     gsap.to(boxContainerRef.current, {
-      rotateX: -15 - y * 8, // Base is -15
-      rotateY: -25 + x * 12, // Base is -25
+      rotateX: -15 - y * 10,
+      rotateY: -25 + x * 15,
       duration: 0.8,
       ease: 'power2.out',
     });
@@ -144,7 +185,6 @@ export default function App() {
 
   const handleMouseLeave = () => {
     if (!boxContainerRef.current || isUnlocked) return;
-    // Reset to base rotation when mouse leaves
     gsap.to(boxContainerRef.current, {
       rotateX: -15,
       rotateY: -25,
@@ -164,10 +204,11 @@ export default function App() {
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Background ambient elements */}
+      {/* Ambient background light */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0">
         <div className="w-[60vw] h-[60vw] bg-pink-100/50 blur-[120px] rounded-full absolute -top-20 -left-20" />
         <div className="w-[50vw] h-[50vw] bg-blue-100/50 blur-[120px] rounded-full absolute bottom-0 right-0" />
+        <div className="w-[40vw] h-[40vw] bg-yellow-100/30 blur-[100px] rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
       </div>
 
       <div className="flex flex-col lg:flex-row items-center justify-center gap-20 lg:gap-32 w-full max-w-6xl z-10 px-4">
@@ -181,7 +222,7 @@ export default function App() {
             transform: 'rotate(-3deg)',
           }}
         >
-          {/* Paper texture overlay (subtle noise) */}
+          {/* Paper texture overlay */}
           <div
             className="absolute inset-0 opacity-[0.04] pointer-events-none mix-blend-multiply"
             style={{
@@ -218,7 +259,7 @@ export default function App() {
                   animate={{ opacity: 1, scale: 1, filter: 'blur(0px)', color: '#be185d' }}
                   exit={{ opacity: 0, scale: 1.1, filter: 'blur(8px)' }}
                   transition={{ duration: 0.7, ease: 'easeOut' }}
-                  className="absolute text-5xl lg:text-6xl font-bold tracking-wider pt-2"
+                  className="absolute text-5xl font-bold tracking-wider pt-2 whitespace-nowrap"
                   style={{ fontFamily: "'Cedarville Cursive', cursive", transform: 'rotate(-5deg)' }}
                 >
                   {WORDS[wordIndex]}
@@ -242,7 +283,6 @@ export default function App() {
             style={{ 
               width: w, height: h, 
               transformStyle: 'preserve-3d',
-              // Initial base isometric rotation
               transform: 'rotateX(-15deg) rotateY(-25deg)',
             }}
           >
@@ -250,89 +290,102 @@ export default function App() {
             {/* ================= BOX BODY ================= */}
             
             {/* Bottom (Inner Floor) */}
-            <div className="absolute border border-slate-900 bg-slate-950 shadow-[0_0_80px_rgba(0,0,0,0.9)]"
+            <div className="absolute bg-slate-950 shadow-[0_0_100px_rgba(0,0,0,0.8)]"
                  style={{ 
                    width: w, height: d, 
-                   transform: `translateY(${h/2 - d/2}px) translateZ(0) rotateX(-90deg)` 
+                   transform: `translateY(${h/2 - d/2}px) translateZ(0) rotateX(-90deg)`,
+                   border: '2px solid rgba(250,204,21,0.2)',
                  }} />
             
             {/* Top (Open Opening - slightly dark interior) */}
-            <div className="absolute border-4 border-amber-600/30 bg-slate-950"
+            <div className="absolute border-4 border-amber-500/50 bg-slate-950/95 backdrop-blur-md"
                  style={{ 
                    width: w, height: d, 
                    transform: `translateY(${-h/2 + d/2}px) translateZ(0) rotateX(90deg)`,
-                   boxShadow: 'inset 0 0 50px rgba(0,0,0,1)'
+                   boxShadow: 'inset 0 0 80px rgba(0,0,0,1)'
                  }} />
 
             {/* Back */}
-            <div className="absolute border border-slate-800 bg-gradient-to-t from-slate-950 to-slate-900"
+            <div className="absolute bg-gradient-to-t from-slate-950 to-slate-800/90 backdrop-blur-sm"
                  style={{ 
                    width: w, height: h, 
-                   transform: `translateZ(${-d/2}px) rotateY(180deg)` 
+                   transform: `translateZ(${-d/2}px) rotateY(180deg)`,
+                   border: '1px solid rgba(250,204,21,0.3)',
                  }} />
             
             {/* Right */}
-            <div className="absolute border border-slate-800 bg-gradient-to-bl from-slate-800 to-slate-950"
+            <div className="absolute bg-gradient-to-bl from-slate-800/90 to-slate-950 backdrop-blur-sm"
                  style={{ 
                    width: d, height: h, 
-                   transform: `translateX(${w/2 - d/2}px) translateZ(0) rotateY(90deg)` 
+                   transform: `translateX(${w/2 - d/2}px) translateZ(0) rotateY(90deg)`,
+                   border: '1px solid rgba(250,204,21,0.3)',
                  }} />
             
             {/* Left */}
-            <div className="absolute border border-slate-700 bg-gradient-to-br from-slate-700 to-slate-900"
+            <div className="absolute bg-gradient-to-br from-slate-700/90 to-slate-900/95 backdrop-blur-sm"
                  style={{ 
                    width: d, height: h, 
-                   transform: `translateX(${-w/2 + d/2}px) translateZ(0) rotateY(-90deg)` 
+                   transform: `translateX(${-w/2 + d/2}px) translateZ(0) rotateY(-90deg)`,
+                   border: '1px solid rgba(250,204,21,0.3)',
+                   boxShadow: 'inset -20px 0 50px rgba(0,0,0,0.5)'
                  }} />
             
             {/* Front */}
-            <div className="absolute border border-slate-700 bg-gradient-to-b from-slate-700 to-slate-900 shadow-[0_30px_60px_rgba(0,0,0,0.4)] flex flex-col items-center justify-center z-10"
+            <div className="absolute bg-gradient-to-b from-slate-800/95 to-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-10"
                  style={{ 
                    width: w, height: h, 
-                   transform: `translateZ(${d/2}px)` 
+                   transform: `translateZ(${d/2}px)`,
+                   border: '1px solid rgba(250,204,21,0.4)',
+                   boxShadow: '0 40px 80px rgba(0,0,0,0.6), inset 0 0 30px rgba(250,204,21,0.1)'
                  }}>
               
-              {/* Front Face Decoration (Gold trim) */}
-              <div className="absolute inset-1 border border-amber-600/30 rounded-[2px]" />
+              {/* Luxury Frame Trim */}
+              <div className="absolute inset-2 border-2 border-amber-500/30 rounded-sm" style={{ boxShadow: 'inset 0 0 10px rgba(250,204,21,0.2)' }} />
               
-              {/* Dials UI */}
+              {/* Mechanical Dials Container */}
               <div 
-                className="bg-slate-950 p-3 rounded-lg flex gap-2 items-center relative z-20"
+                className="bg-slate-900 p-4 rounded-xl flex gap-3 items-center relative z-20 border border-slate-700"
                 style={{ 
-                  boxShadow: 'inset 0 15px 30px rgba(0,0,0,0.9), 0 2px 0 rgba(255,255,255,0.1)',
-                  transform: 'translateZ(2px)' // push slightly out to avoid z-fighting
+                  boxShadow: 'inset 0 20px 40px rgba(0,0,0,1), 0 2px 0 rgba(255,255,255,0.1), 0 0 15px rgba(0,0,0,0.8)',
+                  transform: 'translateZ(5px)' // push out to avoid z-fighting and look 3D
                 }}
               >
                 {code.map((num, idx) => (
-                  <div key={idx} className="flex flex-col items-center gap-1">
+                  <div key={idx} className="flex flex-col items-center gap-1.5">
                     <button 
                       onClick={() => handleDial(idx, 1)}
-                      className="text-slate-500 hover:text-amber-400 transition-colors p-1"
+                      className="text-slate-500 hover:text-amber-400 active:text-amber-300 transition-colors p-1"
                       disabled={isUnlocked}
                     >
-                      <ChevronUp size={22} strokeWidth={3} />
+                      <ChevronUp size={20} strokeWidth={4} />
                     </button>
-                    <div className="w-10 h-14 bg-gradient-to-b from-slate-200 via-white to-slate-300 rounded border border-slate-700 shadow-lg flex items-center justify-center overflow-hidden relative">
-                      <div className="absolute inset-0 shadow-[inset_0_4px_10px_rgba(0,0,0,0.2)] pointer-events-none" />
+                    
+                    {/* The Metallic Wheel */}
+                    <div className="w-12 h-16 bg-gradient-to-b from-slate-400 via-slate-100 to-slate-500 rounded border-[2px] border-slate-800 shadow-[0_4px_10px_rgba(0,0,0,0.5)] flex items-center justify-center overflow-hidden relative">
+                      {/* Inner wheel shadow for depth */}
+                      <div className="absolute inset-0 shadow-[inset_0_8px_15px_rgba(0,0,0,0.6),_inset_0_-8px_15px_rgba(0,0,0,0.6)] pointer-events-none rounded z-10" />
+                      
                       <AnimatePresence mode="popLayout">
                         <motion.span
                           key={num}
-                          initial={{ y: 20, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          exit={{ y: -20, opacity: 0 }}
-                          transition={{ duration: 0.15 }}
-                          className="text-2xl font-black font-mono text-slate-800"
+                          initial={{ y: 25, opacity: 0, rotateX: -45 }}
+                          animate={{ y: 0, opacity: 1, rotateX: 0 }}
+                          exit={{ y: -25, opacity: 0, rotateX: 45 }}
+                          transition={{ duration: 0.2, ease: "circOut" }}
+                          className="text-3xl font-black font-mono text-slate-800 relative z-0"
+                          style={{ textShadow: '0 1px 0 rgba(255,255,255,0.8)' }}
                         >
                           {num}
                         </motion.span>
                       </AnimatePresence>
                     </div>
+                    
                     <button 
                       onClick={() => handleDial(idx, -1)}
-                      className="text-slate-500 hover:text-amber-400 transition-colors p-1"
+                      className="text-slate-500 hover:text-amber-400 active:text-amber-300 transition-colors p-1"
                       disabled={isUnlocked}
                     >
-                      <ChevronDown size={22} strokeWidth={3} />
+                      <ChevronDown size={20} strokeWidth={4} />
                     </button>
                   </div>
                 ))}
@@ -340,7 +393,6 @@ export default function App() {
             </div>
                  
             {/* The Gift inside (hidden initially inside the box) */}
-            {/* It sits in the exact center of the 3D space */}
             <div 
               className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
               style={{ 
@@ -354,43 +406,40 @@ export default function App() {
                 style={{
                   scale: 0,
                   opacity: 0,
-                  // Reverse the rotation of the box so the image always faces the camera flatly
-                  // Note: Since box can rotate dynamically, a true billboard effect is hard without continuous updates.
-                  // But we reset the box rotation to (-10, -20) during unlock, so we offset that here:
                   transform: `rotateY(20deg) rotateX(10deg)` 
                 }}
               >
-                <div className="absolute inset-0 bg-yellow-400/50 blur-[50px] rounded-full scale-150" />
+                <div className="absolute inset-0 bg-yellow-300/60 blur-[60px] rounded-full scale-[2]" />
                 <img 
                   src="/A gift.png" 
                   alt="A magical gift" 
-                  className="w-56 h-56 object-contain filter drop-shadow-[0_0_30px_rgba(250,204,21,0.8)] relative z-10" 
+                  className="w-56 h-56 object-contain filter drop-shadow-[0_0_40px_rgba(250,204,21,1)] relative z-10" 
                   onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=800&auto=format&fit=crop'; }}
                 />
                 
-                {/* Sparkles effect behind gift */}
+                {/* Sparkles effect */}
                 <div className="absolute inset-0 pointer-events-none">
-                  {isUnlocked && Array.from({ length: 12 }).map((_, i) => (
+                  {isUnlocked && Array.from({ length: 15 }).map((_, i) => (
                     <motion.div
                       key={i}
-                      className="absolute text-yellow-300"
+                      className="absolute text-yellow-200"
                       style={{ 
-                        left: `${50 + (Math.random() - 0.5) * 150}%`, 
-                        top: `${50 + (Math.random() - 0.5) * 150}%` 
+                        left: `${50 + (Math.random() - 0.5) * 180}%`, 
+                        top: `${50 + (Math.random() - 0.5) * 180}%` 
                       }}
                       animate={{ 
-                        y: [0, -40, 0], 
+                        y: [0, -50, 0], 
                         opacity: [0, 1, 0], 
                         scale: [0.5, 1.5, 0.5], 
                         rotate: [0, 180] 
                       }}
                       transition={{ 
-                        duration: 1.5 + Math.random() * 1.5, 
+                        duration: 1.2 + Math.random() * 2, 
                         repeat: Infinity, 
                         delay: Math.random() 
                       }}
                     >
-                      <Sparkles size={16 + Math.random() * 20} />
+                      <Sparkles size={16 + Math.random() * 24} />
                     </motion.div>
                   ))}
                 </div>
@@ -398,87 +447,89 @@ export default function App() {
             </div>
 
             {/* ================= BOX LID ================= */}
-            {/* The Lid container anchors at the top-back edge of the box body to act as a hinge */}
             <div 
               ref={lidRef}
               className="absolute" 
               style={{ 
-                // Position lid at the top-back edge of the body
                 left: `50%`, 
                 top: `0`, 
-                // Move it up by half body height, back by half body depth
                 transform: `translate3d(-50%, ${-h/2}px, ${-d/2}px)`,
                 width: lw, 
-                height: ld, // Depth becomes height when flat? No, it's a cube.
+                height: ld,
                 transformStyle: 'preserve-3d',
-                transformOrigin: `50% 50% 0`, // Hinge is at the exact position
+                transformOrigin: `50% 50% 0`,
               }}
             >
-              {/* To make it a box, we construct the lid cube relative to its own center.
-                  Wait, if it's placed at the back edge, its center is actually offset.
-                  Let's offset the lid faces forward by ld/2 so it covers the box. */}
               <div 
                 className="absolute"
                 style={{
                    width: '100%', height: '100%',
                    transformStyle: 'preserve-3d',
-                   transform: `translateZ(${ld/2}px)` // move lid forward to cover the box
+                   transform: `translateZ(${ld/2}px)`
                 }}
               >
                   {/* Lid Top */}
-                  <div className="absolute border-2 border-slate-700 bg-gradient-to-br from-slate-600 to-slate-800 shadow-[0_-10px_20px_rgba(0,0,0,0.2)]"
+                  <div className="absolute bg-gradient-to-br from-slate-700/95 to-slate-900/95 backdrop-blur-md shadow-[0_-15px_30px_rgba(0,0,0,0.4)]"
                       style={{ 
                         width: lw, height: ld, 
-                        transform: `translateY(${-lh/2 + ld/2}px) rotateX(90deg)` 
+                        transform: `translateY(${-lh/2 + ld/2}px) rotateX(90deg)`,
+                        border: '1px solid rgba(250,204,21,0.5)',
                       }}>
-                    <div className="absolute inset-3 border border-amber-500/40 rounded-sm" />
-                    <div className="absolute inset-8 border border-amber-500/20 rounded-sm" />
+                    <div className="absolute inset-3 border-2 border-amber-500/40 rounded-sm" style={{ boxShadow: 'inset 0 0 20px rgba(250,204,21,0.2)' }} />
+                    <div className="absolute inset-10 border border-amber-500/20 rounded-sm" />
                   </div>
                   
                   {/* Lid Bottom (Inner lid) */}
-                  <div className="absolute border border-slate-900 bg-slate-950"
+                  <div className="absolute border border-slate-900 bg-slate-950 shadow-[inset_0_0_50px_rgba(0,0,0,1)]"
                       style={{ 
                         width: lw, height: ld, 
                         transform: `translateY(${lh/2 - ld/2}px) rotateX(-90deg)` 
                       }} />
                       
                   {/* Lid Front */}
-                  <div className="absolute border-2 border-slate-600 bg-gradient-to-b from-slate-600 to-slate-800 flex items-center justify-center shadow-lg"
+                  <div className="absolute bg-gradient-to-b from-slate-700/95 to-slate-900/95 backdrop-blur-md flex items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
                       style={{ 
                         width: lw, height: lh, 
-                        transform: `translateZ(${ld/2}px)` 
+                        transform: `translateZ(${ld/2}px)`,
+                        border: '1px solid rgba(250,204,21,0.4)',
                       }}>
                     <div className="absolute inset-1 border border-amber-500/30 rounded-sm" />
-                    {/* Lock Mechanism on Lid Front */}
-                    <div 
+                    
+                    {/* The Clickable Lock Button */}
+                    <button 
                       ref={lockRef}
-                      className="absolute -bottom-6 w-14 h-14 bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 rounded-full flex items-center justify-center text-slate-900 border-[3px] border-amber-800 shadow-[0_10px_20px_rgba(0,0,0,0.6),_inset_0_2px_5px_rgba(255,255,255,0.6)] z-50 transition-colors"
-                      style={{ transform: 'translateZ(1px)' }}
+                      onClick={handleLockClick}
+                      className="absolute -bottom-8 w-16 h-16 bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 rounded-full flex items-center justify-center text-slate-900 border-[4px] border-slate-900 shadow-[0_10px_25px_rgba(0,0,0,0.8),_inset_0_4px_10px_rgba(255,255,255,0.7)] z-50 transition-transform hover:scale-105 active:scale-95 cursor-pointer outline-none"
+                      style={{ transform: 'translateZ(10px)' }}
+                      disabled={isUnlocked}
                     >
-                      <div className="absolute inset-0.5 rounded-full border border-amber-200/50" />
-                      {isUnlocked ? <Unlock size={22} strokeWidth={2.5} /> : <Lock size={22} strokeWidth={2.5} />}
-                    </div>
+                      <div className="absolute inset-0.5 rounded-full border border-amber-200/60 pointer-events-none" />
+                      {isUnlocked ? <Unlock size={24} strokeWidth={3} /> : <Lock size={24} strokeWidth={3} />}
+                    </button>
                   </div>
                   
                   {/* Lid Back */}
-                  <div className="absolute border border-slate-800 bg-slate-900"
+                  <div className="absolute bg-slate-900/95 backdrop-blur-sm"
                       style={{ 
                         width: lw, height: lh, 
-                        transform: `translateZ(${-ld/2}px) rotateY(180deg)` 
+                        transform: `translateZ(${-ld/2}px) rotateY(180deg)`,
+                        border: '1px solid rgba(250,204,21,0.3)',
                       }} />
                       
                   {/* Lid Right */}
-                  <div className="absolute border-2 border-slate-700 bg-gradient-to-bl from-slate-700 to-slate-900"
+                  <div className="absolute bg-gradient-to-bl from-slate-700/90 to-slate-900/95 backdrop-blur-sm"
                       style={{ 
                         width: ld, height: lh, 
-                        transform: `translateX(${lw/2 - ld/2}px) translateZ(0) rotateY(90deg)` 
+                        transform: `translateX(${lw/2 - ld/2}px) translateZ(0) rotateY(90deg)`,
+                        border: '1px solid rgba(250,204,21,0.3)',
                       }} />
                       
                   {/* Lid Left */}
-                  <div className="absolute border-2 border-slate-600 bg-gradient-to-br from-slate-500 to-slate-700"
+                  <div className="absolute bg-gradient-to-br from-slate-600/90 to-slate-800/95 backdrop-blur-sm"
                       style={{ 
                         width: ld, height: lh, 
-                        transform: `translateX(${-lw/2 + ld/2}px) translateZ(0) rotateY(-90deg)` 
+                        transform: `translateX(${-lw/2 + ld/2}px) translateZ(0) rotateY(-90deg)`,
+                        border: '1px solid rgba(250,204,21,0.3)',
                       }} />
               </div>
             </div>
