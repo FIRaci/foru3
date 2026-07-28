@@ -1,281 +1,285 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import gsap from 'gsap';
-import confetti from 'canvas-confetti';
-import { Sparkles, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import confetti from 'canvas-confetti';
+import { ChevronUp, ChevronDown, Lock, Unlock, Sparkles } from 'lucide-react';
 
-// ─── Constants & Generators ────────────────────────────────────────────────
-const ITEM_WIDTH = 140; 
-const ITEM_GAP = 12;
-const TOTAL_WIDTH = ITEM_WIDTH + ITEM_GAP;
-const TARGET_INDEX = 75; // Vị trí của món đồ vàng
-const TOTAL_ITEMS = 100;
-
-// Các độ hiếm theo style CS:GO
-const RARITIES = [
-  { color: '#4b69ff', bg: 'bg-blue-500', name: 'Mil-Spec' },
-  { color: '#8847ff', bg: 'bg-purple-500', name: 'Restricted' },
-  { color: '#d32ce6', bg: 'bg-pink-500', name: 'Classified' },
-  { color: '#eb4b4b', bg: 'bg-red-500', name: 'Covert' },
+const WORDS = [
+  'beautiful',
+  'gorgeous',
+  'elegant',
+  'cutest',
+  'stunning',
+  'charming',
+  'precious',
+  'angelic',
 ];
 
-function generateItems() {
-  return Array.from({ length: TOTAL_ITEMS }, (_, i) => {
-    // Luôn luôn là vàng ở vị trí target
-    if (i === TARGET_INDEX) {
-      return { id: i, color: '#ffd700', bg: 'bg-yellow-400', name: '★ Món Quà Bí Ẩn ★', isGold: true };
-    }
-    // Random các món khác nhưng tên đều là HIDDEN
-    const r = Math.random();
-    let rarity;
-    if (r < 0.6) rarity = RARITIES[0];
-    else if (r < 0.85) rarity = RARITIES[1];
-    else if (r < 0.96) rarity = RARITIES[2];
-    else rarity = RARITIES[3];
-    
-    return { id: i, ...rarity, name: 'HIDDEN', isGold: false };
-  });
-}
+const CORRECT_PASSWORD = [1, 5, 0, 8];
 
-// ─── Component ──────────────────────────────────────────────────────────────
 export default function App() {
-  const [phase, setPhase] = useState<'idle' | 'spinning' | 'winner' | 'claimed'>('idle');
-  const [items, setItems] = useState(() => generateItems());
-  
-  const containerRef = useRef<HTMLDivElement>(null);
-  const stripRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const [wordIndex, setWordIndex] = useState(0);
+  const [code, setCode] = useState([0, 0, 0, 0]);
+  const [isUnlocked, setIsUnlocked] = useState(false);
 
-  const spin = () => {
-    if (phase !== 'idle') return;
-    if (!containerRef.current || !stripRef.current) return;
+  const boxRef = useRef<HTMLDivElement>(null);
+  const lidRef = useRef<HTMLDivElement>(null);
+  const giftRef = useRef<HTMLDivElement>(null);
+  const lockRef = useRef<HTMLDivElement>(null);
 
-    setPhase('spinning');
+  // Magic word interval
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWordIndex((prev) => (prev + 1) % WORDS.length);
+    }, 1500);
+    return () => clearInterval(interval);
+  }, []);
 
-    setItems(generateItems());
-    gsap.set(stripRef.current, { x: 0 });
+  // Check password
+  useEffect(() => {
+    if (code.join('') === CORRECT_PASSWORD.join('') && !isUnlocked) {
+      setIsUnlocked(true);
+      triggerUnlockAnimation();
+    }
+  }, [code, isUnlocked]);
 
-    const containerWidth = containerRef.current.clientWidth;
-    const itemCenterOffset = (TARGET_INDEX * TOTAL_WIDTH) + (ITEM_WIDTH / 2);
-    const baseTranslate = itemCenterOffset - (containerWidth / 2);
-    
-    // Thêm random offset xê dịch trong phạm vi chiều rộng của item (trừ đi 10px lề cho an toàn)
-    const randomOffset = (Math.random() - 0.5) * (ITEM_WIDTH - 20);
-    
-    const finalTranslate = -(baseTranslate + randomOffset);
+  const triggerUnlockAnimation = () => {
+    const tl = gsap.timeline();
 
-    gsap.to(stripRef.current, {
-      x: finalTranslate,
-      duration: 8,
-      ease: 'power4.out',
-      onComplete: () => {
-        setPhase('winner');
-        triggerWin();
-      }
+    // 1. Shake the lock
+    tl.to(lockRef.current, {
+      x: 3,
+      duration: 0.05,
+      yoyo: true,
+      repeat: 6,
+    })
+      // 2. Lock turns green & pops
+      .to(lockRef.current, {
+        scale: 1.1,
+        color: '#10b981',
+        duration: 0.2,
+      })
+      .to(lockRef.current, {
+        scale: 0,
+        opacity: 0,
+        duration: 0.4,
+        ease: 'back.in(1.5)',
+      })
+      // 3. Lid opens
+      .to(lidRef.current, {
+        y: -150,
+        opacity: 0,
+        rotate: -5,
+        duration: 1.2,
+        ease: 'power3.inOut',
+      })
+      // 4. Gift pops out
+      .to(
+        giftRef.current,
+        {
+          scale: 1,
+          opacity: 1,
+          y: -40,
+          duration: 1.5,
+          ease: 'elastic.out(1, 0.5)',
+        },
+        '-=0.6'
+      );
+
+    setTimeout(() => {
+      confetti({
+        particleCount: 120,
+        spread: 100,
+        origin: { y: 0.6 },
+        colors: ['#f43f5e', '#ec4899', '#fde047'],
+      });
+    }, 1000);
+  };
+
+  const handleDial = (index: number, direction: 1 | -1) => {
+    if (isUnlocked) return;
+    setCode((prev) => {
+      const newCode = [...prev];
+      let val = newCode[index] + direction;
+      if (val > 9) val = 0;
+      if (val < 0) val = 9;
+      newCode[index] = val;
+      return newCode;
     });
   };
 
-  const triggerWin = () => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.volume = 0.6;
-      audioRef.current.play().catch(() => {});
-    }
-
-    const launch = (opts: confetti.Options) => confetti({ ...opts, zIndex: 9999 });
-
-    launch({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: ['#fde047', '#fbbf24', '#ffffff'] });
-
-    const end = Date.now() + 3500;
-    const frame = () => {
-      launch({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0, y: 0.7 }, colors: ['#fde047', '#fbbf24'] });
-      launch({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1, y: 0.7 }, colors: ['#fde047', '#fbbf24'] });
-      if (Date.now() < end) requestAnimationFrame(frame);
-    };
-    frame();
-  };
-
-  const reset = () => {
-    setPhase('idle');
-    gsap.set(stripRef.current, { x: 0 });
-    setItems(generateItems());
-  };
-
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center font-sans overflow-hidden relative select-none">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 lg:p-12 font-sans overflow-hidden relative">
       
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-        <div className="w-[800px] h-[300px] bg-slate-800 opacity-50 blur-[100px] rounded-full" />
+      {/* Background ambient elements */}
+      <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden">
+        <div className="w-[60vw] h-[60vw] bg-pink-100/40 blur-[120px] rounded-full absolute -top-20 -left-20" />
+        <div className="w-[50vw] h-[50vw] bg-blue-100/40 blur-[120px] rounded-full absolute bottom-0 right-0" />
       </div>
 
-      <audio ref={audioRef} src="https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3" preload="auto" />
+      <div className="flex flex-col lg:flex-row items-center justify-center gap-16 lg:gap-32 w-full max-w-6xl z-10">
+        
+        {/* ─── MAGIC PAPER ─────────────────────────────────────────────────── */}
+        <div
+          className="relative w-full max-w-[360px] aspect-[3/4] bg-[#fcfaf2] border border-[#e8e4d3] rounded-sm p-10 lg:p-12 flex flex-col justify-center"
+          style={{
+            boxShadow:
+              '2px 4px 16px rgba(0,0,0,0.06), inset 0 0 80px rgba(0,0,0,0.02)',
+            transform: 'rotate(-2deg)',
+          }}
+        >
+          {/* Paper lines overlay */}
+          <div
+            className="absolute inset-0 opacity-20 pointer-events-none"
+            style={{
+              backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, #94a3b8 31px, #94a3b8 32px)',
+              backgroundPosition: '0 40px',
+            }}
+          />
 
-      <AnimatePresence mode="wait">
-        {phase !== 'claimed' ? (
-          <motion.div
-            key="unbox-screen"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, filter: 'blur(5px)' }}
-            transition={{ duration: 0.4 }}
-            className="flex flex-col items-center z-10 w-full max-w-6xl px-4"
+          <div
+            className="relative z-10 text-slate-700 font-medium flex flex-col items-center text-center"
+            style={{ fontFamily: "'Caveat', cursive", fontSize: '2.5rem', lineHeight: '1.4' }}
           >
-            <div className="text-center mb-12">
-              <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight uppercase drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-                Mystery Case
-              </h1>
-              <p className="text-slate-400 mt-3 text-lg font-medium">
-                {phase === 'idle' && 'Mở hòm nhận quà ngay!'}
-                {phase === 'spinning' && 'Đang tìm kiếm vận may...'}
-                {phase === 'winner' && '🎉 Vàng rồi!!! Chúc mừng bạn!'}
-              </p>
+            <p>The password is</p>
+            <p>day of birth of</p>
+            <p>the most</p>
+            
+            <div className="h-16 w-full flex justify-center relative my-1">
+              <AnimatePresence mode="popLayout">
+                <motion.span
+                  key={wordIndex}
+                  initial={{ opacity: 0, y: 15, filter: 'blur(4px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)', color: '#e11d48' }}
+                  exit={{ opacity: 0, y: -15, filter: 'blur(4px)' }}
+                  transition={{ duration: 0.6, ease: 'easeOut' }}
+                  className="absolute text-5xl lg:text-6xl font-bold tracking-wide"
+                >
+                  {WORDS[wordIndex]}
+                </motion.span>
+              </AnimatePresence>
+            </div>
+            
+            <p className="mt-2">girl in this world.</p>
+          </div>
+        </div>
+
+        {/* ─── PUZZLE BOX ──────────────────────────────────────────────────── */}
+        <div className="relative flex flex-col items-center justify-center">
+          
+          <div ref={boxRef} className="relative w-72 h-80 lg:w-80 lg:h-96">
+            
+            {/* Box Body */}
+            <div 
+              className="absolute bottom-0 left-0 right-0 h-[60%] rounded-xl border border-slate-700 bg-gradient-to-b from-slate-800 to-slate-900 shadow-2xl flex items-center justify-center z-10"
+              style={{
+                boxShadow: '0 20px 40px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.1)'
+              }}
+            >
+              {/* Dials UI */}
+              <div 
+                className="bg-slate-950 p-4 rounded-lg flex gap-3 items-center"
+                style={{ boxShadow: 'inset 0 10px 20px rgba(0,0,0,0.5)' }}
+              >
+                {code.map((num, idx) => (
+                  <div key={idx} className="flex flex-col items-center gap-2">
+                    <button 
+                      onClick={() => handleDial(idx, 1)}
+                      className="text-slate-500 hover:text-slate-300 transition-colors p-1"
+                      disabled={isUnlocked}
+                    >
+                      <ChevronUp size={24} />
+                    </button>
+                    <div className="w-12 h-16 bg-gradient-to-b from-slate-200 via-white to-slate-300 rounded border-2 border-slate-700 shadow-md flex items-center justify-center overflow-hidden">
+                      <AnimatePresence mode="popLayout">
+                        <motion.span
+                          key={num}
+                          initial={{ y: 20, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          exit={{ y: -20, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="text-3xl font-bold font-mono text-slate-800"
+                        >
+                          {num}
+                        </motion.span>
+                      </AnimatePresence>
+                    </div>
+                    <button 
+                      onClick={() => handleDial(idx, -1)}
+                      className="text-slate-500 hover:text-slate-300 transition-colors p-1"
+                      disabled={isUnlocked}
+                    >
+                      <ChevronDown size={24} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="w-full relative py-6">
-              
-              <div className="absolute top-0 bottom-0 left-1/2 w-1 bg-amber-400 -translate-x-1/2 z-30 shadow-[0_0_15px_rgba(251,191,36,0.8)]" />
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-2 border-[10px] border-transparent border-t-amber-400 z-30" />
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 -mb-2 border-[10px] border-transparent border-b-amber-400 z-30" />
-
-              <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-slate-900 to-transparent z-20 pointer-events-none" />
-              <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-slate-900 to-transparent z-20 pointer-events-none" />
-
+            {/* Box Lid */}
+            <div 
+              ref={lidRef}
+              className="absolute top-0 left-0 right-0 h-[45%] rounded-xl border border-slate-700 bg-gradient-to-b from-slate-700 to-slate-800 shadow-xl z-30 flex justify-center"
+              style={{
+                boxShadow: '0 10px 30px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.15)'
+              }}
+            >
+              {/* Lock Icon */}
               <div 
-                ref={containerRef}
-                className="w-full h-40 overflow-hidden bg-slate-800/80 border-y-2 border-slate-700/50 shadow-2xl relative"
-                style={{
-                  boxShadow: 'inset 0 0 50px rgba(0,0,0,0.5)'
-                }}
+                ref={lockRef}
+                className="absolute -bottom-8 w-16 h-16 bg-gradient-to-br from-amber-300 to-amber-500 rounded-full flex items-center justify-center text-slate-900 border-4 border-slate-800 shadow-lg"
               >
-                <div 
-                  ref={stripRef}
-                  className="flex h-full items-center absolute left-0"
-                  style={{ gap: `${ITEM_GAP}px`, paddingLeft: '50vw' }}
-                >
-                  {items.map((item, index) => (
-                    <div 
-                      key={`${item.id}-${index}`}
-                      className="flex-shrink-0 h-32 relative rounded-md overflow-hidden bg-slate-800 flex flex-col justify-end"
+                {isUnlocked ? <Unlock size={28} strokeWidth={2.5} /> : <Lock size={28} strokeWidth={2.5} />}
+              </div>
+            </div>
+
+            {/* The Gift inside (hidden initially) */}
+            <div 
+              ref={giftRef}
+              className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20"
+              style={{ scale: 0.5, opacity: 0, pointerEvents: isUnlocked ? 'auto' : 'none' }}
+            >
+              <div className="relative">
+                <div className="absolute inset-0 bg-yellow-400/20 blur-xl rounded-full" />
+                <img 
+                  src="/A gift.png" 
+                  alt="A magical gift" 
+                  className="w-48 h-48 object-contain filter drop-shadow-2xl relative z-10" 
+                />
+                
+                {/* Sparkles effect behind gift */}
+                <div className="absolute inset-0 pointer-events-none">
+                  {isUnlocked && Array.from({ length: 8 }).map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute text-yellow-500"
                       style={{ 
-                        width: `${ITEM_WIDTH}px`,
-                        boxShadow: `inset 0 -4px 0 ${item.color}, 0 4px 6px rgba(0,0,0,0.3)`,
+                        left: `${50 + (Math.random() - 0.5) * 120}%`, 
+                        top: `${50 + (Math.random() - 0.5) * 120}%` 
+                      }}
+                      animate={{ 
+                        y: [0, -10, 0], 
+                        opacity: [0, 1, 0], 
+                        scale: [0.5, 1, 0.5], 
+                        rotate: [0, 90] 
+                      }}
+                      transition={{ 
+                        duration: 1.5 + Math.random(), 
+                        repeat: Infinity, 
+                        delay: Math.random() 
                       }}
                     >
-                      {item.isGold ? (
-                         <div className="absolute inset-0 bg-yellow-500/10 flex items-center justify-center p-2">
-                            <img src="/A gift.png" alt="A special gift" className="w-full h-full object-contain filter drop-shadow-md" />
-                         </div>
-                      ) : (
-                         <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                            <div className="w-16 h-16 rounded-full bg-slate-600/30 flex items-center justify-center font-black text-slate-400 text-2xl">?</div>
-                         </div>
-                      )}
-
-                      <div className="p-2 z-10 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent pt-6">
-                        <div 
-                           className="text-[10px] font-bold uppercase tracking-wider text-center line-clamp-1"
-                           style={{ color: item.color }}
-                        >
-                          {item.name}
-                        </div>
-                      </div>
-                    </div>
+                      <Sparkles size={16 + Math.random() * 12} />
+                    </motion.div>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="mt-12">
-              {phase === 'winner' ? (
-                <motion.button
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', bounce: 0.6 }}
-                  onClick={() => setPhase('claimed')}
-                  className="px-12 py-4 rounded-lg font-black text-xl text-slate-900 uppercase tracking-widest cursor-pointer shadow-[0_0_40px_rgba(251,191,36,0.6)] bg-gradient-to-r from-yellow-300 via-yellow-400 to-amber-500"
-                  whileHover={{ scale: 1.05, filter: 'brightness(1.1)' }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  🎁 Lấy Đồ Vàng Ngay
-                </motion.button>
-              ) : (
-                <motion.button
-                  onClick={spin}
-                  disabled={phase === 'spinning'}
-                  className="px-16 py-4 rounded-lg font-black text-xl text-white uppercase tracking-widest cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-emerald-500 to-teal-600 border border-emerald-400/30 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
-                  whileHover={phase !== 'spinning' ? { scale: 1.05, filter: 'brightness(1.1)' } : {}}
-                  whileTap={phase !== 'spinning' ? { scale: 0.95 } : {}}
-                >
-                  {phase === 'spinning' ? 'Opening...' : 'Mở Hòm'}
-                </motion.button>
-              )}
-            </div>
+          </div>
+        </div>
 
-          </motion.div>
-        ) : (
-          // ── Reward Claim Screen ──────────────────────────────────────────────
-          <motion.div
-            key="reward-screen"
-            initial={{ opacity: 0, scale: 0.85, y: 40 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ type: 'spring', bounce: 0.45, duration: 0.8 }}
-            className="flex flex-col items-center gap-6 z-20 px-4 w-full max-w-xl"
-          >
-            <div className="text-center">
-              <h2 className="text-5xl md:text-6xl font-black text-amber-400 mb-2 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)] uppercase tracking-wider">
-                Special Item
-              </h2>
-              <p className="text-slate-300 font-medium text-lg">Bạn đã unbox được một siêu phẩm!</p>
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35 }}
-              className="relative rounded-2xl overflow-hidden bg-slate-800"
-              style={{ boxShadow: '0 30px 60px rgba(0,0,0,0.4), 0 0 0 2px #334155, 0 0 0 8px #fde047' }}
-            >
-              <img
-                src="/A gift.png"
-                alt="A special gift"
-                className="w-full max-w-lg h-auto object-contain bg-slate-900"
-                onError={(e) => {
-                  e.currentTarget.src = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=800&auto=format&fit=crop';
-                }}
-              />
-            </motion.div>
-
-            {/* Vòng lặp sparkle bay bay ở màn nhận quà */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              {Array.from({ length: 15 }).map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute text-yellow-400/70"
-                  style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%` }}
-                  animate={{ y: [0, -20, 0], opacity: [0, 1, 0], scale: [0.5, 1.2, 0.5], rotate: [0, 180] }}
-                  transition={{ duration: 2 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 2 }}
-                >
-                  <Sparkles size={16 + Math.random() * 16} />
-                </motion.div>
-              ))}
-            </div>
-
-            <motion.button
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8 }}
-              onClick={reset}
-              className="flex items-center gap-2 px-8 py-3 rounded-md font-bold text-slate-300 border border-slate-600 hover:border-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer mt-4"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <RotateCcw size={18} />
-              Mở hòm tiếp
-            </motion.button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </div>
     </div>
   );
 }
