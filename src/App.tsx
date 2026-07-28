@@ -15,17 +15,17 @@ const WORDS = [
   'angelic',
 ];
 
-const CORRECT_PASSWORD = [1, 5, 0, 8];
+const CORRECT_PASSWORD = [2, 8, 0, 4];
 
 export default function App() {
   const [wordIndex, setWordIndex] = useState(0);
   const [code, setCode] = useState([0, 0, 0, 0]);
   const [isUnlocked, setIsUnlocked] = useState(false);
 
-  const boxRef = useRef<HTMLDivElement>(null);
   const lidRef = useRef<HTMLDivElement>(null);
   const giftRef = useRef<HTMLDivElement>(null);
   const lockRef = useRef<HTMLDivElement>(null);
+  const boxContainerRef = useRef<HTMLDivElement>(null);
 
   // Magic word interval
   useEffect(() => {
@@ -65,35 +65,49 @@ export default function App() {
         duration: 0.4,
         ease: 'back.in(1.5)',
       })
-      // 3. Lid opens
+      // 3. Shake the whole box slightly before opening
+      .to(boxContainerRef.current, {
+        rotateX: -10,
+        rotateY: 20,
+        duration: 0.1,
+        yoyo: true,
+        repeat: 3,
+      })
+      // Reset rotation back to isometric
+      .to(boxContainerRef.current, {
+        rotateX: -15,
+        rotateY: -25,
+        duration: 0.2,
+      })
+      // 4. Lid opens (rotates backwards like a hinge)
       .to(lidRef.current, {
-        y: -150,
-        opacity: 0,
-        rotate: -5,
+        rotateX: 110, // open backwards
         duration: 1.2,
         ease: 'power3.inOut',
       })
-      // 4. Gift pops out
+      // 5. Gift pops out from inside
       .to(
         giftRef.current,
         {
           scale: 1,
           opacity: 1,
-          y: -40,
-          duration: 1.5,
+          y: -80,
+          rotateY: 360,
+          duration: 1.8,
           ease: 'elastic.out(1, 0.5)',
         },
-        '-=0.6'
+        '-=0.8'
       );
 
     setTimeout(() => {
       confetti({
-        particleCount: 120,
+        particleCount: 150,
         spread: 100,
-        origin: { y: 0.6 },
+        origin: { y: 0.5 },
         colors: ['#f43f5e', '#ec4899', '#fde047'],
+        zIndex: 100,
       });
-    }, 1000);
+    }, 1200);
   };
 
   const handleDial = (index: number, direction: 1 | -1) => {
@@ -108,11 +122,17 @@ export default function App() {
     });
   };
 
+  // 3D CSS values for the box
+  // Size: 240px wide, 240px deep, 180px high
+  const w = 240, d = 240, h = 180;
+  // Lid: 250px wide, 250px deep, 40px high
+  const lw = 250, ld = 250, lh = 50;
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 lg:p-12 font-sans overflow-hidden relative">
       
       {/* Background ambient elements */}
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0">
         <div className="w-[60vw] h-[60vw] bg-pink-100/40 blur-[120px] rounded-full absolute -top-20 -left-20" />
         <div className="w-[50vw] h-[50vw] bg-blue-100/40 blur-[120px] rounded-full absolute bottom-0 right-0" />
       </div>
@@ -121,84 +141,109 @@ export default function App() {
         
         {/* ─── MAGIC PAPER ─────────────────────────────────────────────────── */}
         <div
-          className="relative w-full max-w-[360px] aspect-[3/4] bg-[#fcfaf2] border border-[#e8e4d3] rounded-sm p-10 lg:p-12 flex flex-col justify-center"
+          className="relative w-full max-w-[380px] aspect-[3/4] bg-[#fcf9f2] border border-[#e3dac9] rounded-sm p-10 lg:p-12 flex flex-col justify-center"
           style={{
             boxShadow:
-              '2px 4px 16px rgba(0,0,0,0.06), inset 0 0 80px rgba(0,0,0,0.02)',
+              '2px 4px 16px rgba(0,0,0,0.08), inset 0 0 100px rgba(180,160,120,0.1)',
             transform: 'rotate(-2deg)',
           }}
         >
-          {/* Paper lines overlay */}
+          {/* Paper texture overlay (subtle noise) */}
           <div
-            className="absolute inset-0 opacity-20 pointer-events-none"
+            className="absolute inset-0 opacity-[0.03] pointer-events-none"
             style={{
-              backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, #94a3b8 31px, #94a3b8 32px)',
+              backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
+            }}
+          />
+          {/* Paper lines */}
+          <div
+            className="absolute inset-0 opacity-15 pointer-events-none"
+            style={{
+              backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, #64748b 31px, #64748b 32px)',
               backgroundPosition: '0 40px',
             }}
           />
 
           <div
-            className="relative z-10 text-slate-700 font-medium flex flex-col items-center text-center"
-            style={{ fontFamily: "'Caveat', cursive", fontSize: '2.5rem', lineHeight: '1.4' }}
+            className="relative z-10 text-slate-800 flex flex-col items-center text-center"
+            style={{ 
+              fontFamily: "'Homemade Apple', cursive", 
+              fontSize: '1.8rem', 
+              lineHeight: '1.8',
+              textShadow: '0.5px 0.5px 1px rgba(0,0,0,0.1)'
+            }}
           >
-            <p>The password is</p>
-            <p>day of birth of</p>
-            <p>the most</p>
+            <p className="whitespace-nowrap -ml-2">The password is</p>
+            <p className="whitespace-nowrap ml-4">day of birth of</p>
+            <p className="whitespace-nowrap -ml-6">the most</p>
             
-            <div className="h-16 w-full flex justify-center relative my-1">
+            <div className="h-16 w-full flex justify-center relative my-4">
               <AnimatePresence mode="popLayout">
                 <motion.span
                   key={wordIndex}
-                  initial={{ opacity: 0, y: 15, filter: 'blur(4px)' }}
-                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)', color: '#e11d48' }}
-                  exit={{ opacity: 0, y: -15, filter: 'blur(4px)' }}
+                  initial={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
+                  animate={{ opacity: 1, scale: 1, filter: 'blur(0px)', color: '#be185d' }}
+                  exit={{ opacity: 0, scale: 1.1, filter: 'blur(4px)' }}
                   transition={{ duration: 0.6, ease: 'easeOut' }}
                   className="absolute text-5xl lg:text-6xl font-bold tracking-wide"
+                  style={{ fontFamily: "'Cedarville Cursive', cursive", transform: 'rotate(-5deg)' }}
                 >
                   {WORDS[wordIndex]}
                 </motion.span>
               </AnimatePresence>
             </div>
             
-            <p className="mt-2">girl in this world.</p>
+            <p className="mt-2 ml-2">girl in this world.</p>
           </div>
         </div>
 
-        {/* ─── PUZZLE BOX ──────────────────────────────────────────────────── */}
-        <div className="relative flex flex-col items-center justify-center">
-          
-          <div ref={boxRef} className="relative w-72 h-80 lg:w-80 lg:h-96">
+        {/* ─── 3D PUZZLE BOX ──────────────────────────────────────────────────── */}
+        <div 
+          className="relative w-80 h-96 flex items-center justify-center perspective-[1200px]"
+          style={{ perspective: '1200px' }}
+        >
+          {/* 3D Scene Container */}
+          <div 
+            ref={boxContainerRef}
+            className="relative transform-style-3d transition-transform duration-500 ease-out"
+            style={{ 
+              width: w, height: h, 
+              transformStyle: 'preserve-3d',
+              transform: 'rotateX(-15deg) rotateY(-25deg)',
+            }}
+          >
             
-            {/* Box Body */}
-            <div 
-              className="absolute bottom-0 left-0 right-0 h-[60%] rounded-xl border border-slate-700 bg-gradient-to-b from-slate-800 to-slate-900 shadow-2xl flex items-center justify-center z-10"
-              style={{
-                boxShadow: '0 20px 40px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.1)'
-              }}
-            >
-              {/* Dials UI */}
+            {/* --- BOX BODY --- */}
+            {/* Front */}
+            <div className="absolute border border-slate-700 bg-gradient-to-br from-slate-700 to-slate-900 shadow-2xl flex items-center justify-center"
+                 style={{ width: w, height: h, transform: `translateZ(${d/2}px)` }}>
+                 
+              {/* Dials UI embedded in front face */}
               <div 
-                className="bg-slate-950 p-4 rounded-lg flex gap-3 items-center"
-                style={{ boxShadow: 'inset 0 10px 20px rgba(0,0,0,0.5)' }}
+                className="bg-slate-950 p-3 rounded-lg flex gap-2 items-center"
+                style={{ 
+                  boxShadow: 'inset 0 10px 20px rgba(0,0,0,0.8), 0 2px 0 rgba(255,255,255,0.1)',
+                  transform: 'translateZ(1px)' // push slightly out
+                }}
               >
                 {code.map((num, idx) => (
-                  <div key={idx} className="flex flex-col items-center gap-2">
+                  <div key={idx} className="flex flex-col items-center gap-1">
                     <button 
                       onClick={() => handleDial(idx, 1)}
-                      className="text-slate-500 hover:text-slate-300 transition-colors p-1"
+                      className="text-slate-500 hover:text-amber-400 transition-colors p-1"
                       disabled={isUnlocked}
                     >
-                      <ChevronUp size={24} />
+                      <ChevronUp size={20} strokeWidth={3} />
                     </button>
-                    <div className="w-12 h-16 bg-gradient-to-b from-slate-200 via-white to-slate-300 rounded border-2 border-slate-700 shadow-md flex items-center justify-center overflow-hidden">
+                    <div className="w-10 h-14 bg-gradient-to-b from-slate-200 via-white to-slate-300 rounded border border-slate-700 shadow-md flex items-center justify-center overflow-hidden">
                       <AnimatePresence mode="popLayout">
                         <motion.span
                           key={num}
                           initial={{ y: 20, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
                           exit={{ y: -20, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="text-3xl font-bold font-mono text-slate-800"
+                          transition={{ duration: 0.15 }}
+                          className="text-2xl font-black font-mono text-slate-800"
                         >
                           {num}
                         </motion.span>
@@ -206,74 +251,133 @@ export default function App() {
                     </div>
                     <button 
                       onClick={() => handleDial(idx, -1)}
-                      className="text-slate-500 hover:text-slate-300 transition-colors p-1"
+                      className="text-slate-500 hover:text-amber-400 transition-colors p-1"
                       disabled={isUnlocked}
                     >
-                      <ChevronDown size={24} />
+                      <ChevronDown size={20} strokeWidth={3} />
                     </button>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Box Lid */}
-            <div 
-              ref={lidRef}
-              className="absolute top-0 left-0 right-0 h-[45%] rounded-xl border border-slate-700 bg-gradient-to-b from-slate-700 to-slate-800 shadow-xl z-30 flex justify-center"
-              style={{
-                boxShadow: '0 10px 30px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.15)'
-              }}
-            >
-              {/* Lock Icon */}
-              <div 
-                ref={lockRef}
-                className="absolute -bottom-8 w-16 h-16 bg-gradient-to-br from-amber-300 to-amber-500 rounded-full flex items-center justify-center text-slate-900 border-4 border-slate-800 shadow-lg"
-              >
-                {isUnlocked ? <Unlock size={28} strokeWidth={2.5} /> : <Lock size={28} strokeWidth={2.5} />}
-              </div>
-            </div>
-
-            {/* The Gift inside (hidden initially) */}
+            
+            {/* Back */}
+            <div className="absolute border border-slate-800 bg-slate-900"
+                 style={{ width: w, height: h, transform: `translateZ(${-d/2}px) rotateY(180deg)` }} />
+            
+            {/* Right */}
+            <div className="absolute border border-slate-800 bg-gradient-to-bl from-slate-800 to-slate-950"
+                 style={{ width: d, height: h, transform: `translateX(${w/2 - d/2}px) translateZ(0) rotateY(90deg)` }} />
+            
+            {/* Left */}
+            <div className="absolute border border-slate-700 bg-gradient-to-br from-slate-600 to-slate-800"
+                 style={{ width: d, height: h, transform: `translateX(${-w/2 + d/2}px) translateZ(0) rotateY(-90deg)` }} />
+            
+            {/* Bottom */}
+            <div className="absolute border border-slate-900 bg-slate-950 shadow-[0_0_50px_rgba(0,0,0,0.8)]"
+                 style={{ width: w, height: d, transform: `translateY(${h/2 - d/2}px) translateZ(0) rotateX(-90deg)` }} />
+            
+            {/* Top (Inside floor of the box) */}
+            <div className="absolute border border-slate-900 bg-slate-900"
+                 style={{ width: w, height: d, transform: `translateY(${-h/2 + d/2}px) translateZ(0) rotateX(90deg)` }} />
+                 
+            {/* The Gift inside (hidden initially inside the box) */}
             <div 
               ref={giftRef}
-              className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20"
-              style={{ scale: 0.5, opacity: 0, pointerEvents: isUnlocked ? 'auto' : 'none' }}
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+              style={{ 
+                transformStyle: 'preserve-3d',
+                scale: 0.2, 
+                opacity: 0, 
+                pointerEvents: isUnlocked ? 'auto' : 'none',
+                // Keep the image facing the camera despite box rotation by reversing the box rotation
+                transform: `translate(-50%, -50%) translateZ(0px) rotateX(15deg) rotateY(25deg)` 
+              }}
             >
               <div className="relative">
-                <div className="absolute inset-0 bg-yellow-400/20 blur-xl rounded-full" />
+                <div className="absolute inset-0 bg-yellow-400/40 blur-2xl rounded-full scale-150" />
                 <img 
                   src="/A gift.png" 
                   alt="A magical gift" 
-                  className="w-48 h-48 object-contain filter drop-shadow-2xl relative z-10" 
+                  className="w-56 h-56 object-contain filter drop-shadow-[0_0_30px_rgba(250,204,21,0.6)] relative z-10" 
+                  onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=800&auto=format&fit=crop'; }}
                 />
                 
                 {/* Sparkles effect behind gift */}
                 <div className="absolute inset-0 pointer-events-none">
-                  {isUnlocked && Array.from({ length: 8 }).map((_, i) => (
+                  {isUnlocked && Array.from({ length: 12 }).map((_, i) => (
                     <motion.div
                       key={i}
-                      className="absolute text-yellow-500"
+                      className="absolute text-yellow-300"
                       style={{ 
-                        left: `${50 + (Math.random() - 0.5) * 120}%`, 
-                        top: `${50 + (Math.random() - 0.5) * 120}%` 
+                        left: `${50 + (Math.random() - 0.5) * 150}%`, 
+                        top: `${50 + (Math.random() - 0.5) * 150}%` 
                       }}
                       animate={{ 
-                        y: [0, -10, 0], 
+                        y: [0, -30, 0], 
                         opacity: [0, 1, 0], 
-                        scale: [0.5, 1, 0.5], 
-                        rotate: [0, 90] 
+                        scale: [0.5, 1.2, 0.5], 
+                        rotate: [0, 180] 
                       }}
                       transition={{ 
-                        duration: 1.5 + Math.random(), 
+                        duration: 1.5 + Math.random() * 1.5, 
                         repeat: Infinity, 
                         delay: Math.random() 
                       }}
                     >
-                      <Sparkles size={16 + Math.random() * 12} />
+                      <Sparkles size={12 + Math.random() * 20} />
                     </motion.div>
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/* --- BOX LID --- */}
+            <div 
+              ref={lidRef}
+              className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[25px]" // Hinge at the top back
+              style={{ 
+                width: lw, height: lh,
+                transformStyle: 'preserve-3d',
+                transformOrigin: `50% 50% ${-ld/2}px`, // hinge at the back edge
+              }}
+            >
+              {/* Lid Top */}
+              <div className="absolute border border-slate-600 bg-gradient-to-br from-slate-600 to-slate-800 shadow-md"
+                   style={{ width: lw, height: ld, transform: `translateY(${-lh/2 + ld/2}px) translateZ(0) rotateX(90deg)` }}>
+                {/* Decoration lines on lid */}
+                <div className="absolute inset-4 border-2 border-slate-700/50 rounded-sm" />
+              </div>
+              
+              {/* Lid Bottom (Inner lid) */}
+              <div className="absolute border border-slate-900 bg-slate-900"
+                   style={{ width: lw, height: ld, transform: `translateY(${lh/2 - ld/2}px) translateZ(0) rotateX(-90deg)` }} />
+                   
+              {/* Lid Front */}
+              <div className="absolute border border-slate-600 bg-gradient-to-b from-slate-600 to-slate-800 flex items-center justify-center"
+                   style={{ width: lw, height: lh, transform: `translateZ(${ld/2}px)` }}>
+                 {/* Lock Mechanism (Hangs on front of lid) */}
+                 <div 
+                   ref={lockRef}
+                   className="absolute -bottom-8 w-16 h-16 bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 rounded-full flex items-center justify-center text-slate-900 border-[3px] border-amber-800 shadow-[0_10px_20px_rgba(0,0,0,0.5),_inset_0_2px_5px_rgba(255,255,255,0.6)] z-50"
+                   style={{ transform: 'translateZ(2px)' }}
+                 >
+                   <div className="absolute inset-1 rounded-full border border-amber-300/50" />
+                   {isUnlocked ? <Unlock size={24} strokeWidth={2.5} /> : <Lock size={24} strokeWidth={2.5} />}
+                 </div>
+              </div>
+              
+              {/* Lid Back */}
+              <div className="absolute border border-slate-800 bg-slate-900"
+                   style={{ width: lw, height: lh, transform: `translateZ(${-ld/2}px) rotateY(180deg)` }} />
+                   
+              {/* Lid Right */}
+              <div className="absolute border border-slate-700 bg-gradient-to-bl from-slate-700 to-slate-900"
+                   style={{ width: ld, height: lh, transform: `translateX(${lw/2 - ld/2}px) translateZ(0) rotateY(90deg)` }} />
+                   
+              {/* Lid Left */}
+              <div className="absolute border border-slate-600 bg-gradient-to-br from-slate-500 to-slate-700"
+                   style={{ width: ld, height: lh, transform: `translateX(${-lw/2 + ld/2}px) translateZ(0) rotateY(-90deg)` }} />
             </div>
 
           </div>
